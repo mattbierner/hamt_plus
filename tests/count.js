@@ -7,6 +7,7 @@ exports.empty = function(test) {
 };
 
 exports.simple_count = function(test) {
+    console.log( hamt.make());
     var h1 = hamt.set('b', 5, hamt.set('a', 3, hamt.make()));
     
     test.equal(hamt.count(h1), 2);
@@ -15,7 +16,7 @@ exports.simple_count = function(test) {
 };
 
 exports.collision = function(test) {
-    var h1 = hamt.setHash(0, 'b', 5, hamt.setHash(0, 'a', 3, hamt.make()));
+    var h1 = hamt.set('b', 5, hamt.set('a', 3, hamt.make({'hash': function() { return 0; }})));
     
     test.equal(hamt.count(h1), 2);
     

@@ -14,23 +14,13 @@ package(
     mutate
     
 // Queries
-    tryGetHash
     tryGet
-    
-    getHash
     get
-    
-    hasHash
     has
     
 // Single Update
-    setHash
     set
-    
-    modifyHash
     modify
-    
-    removeHash
     remove
     
 // Aggregate
@@ -354,7 +344,8 @@ in
             false,
             0,
             {
-                keyCompare: config && (config.keyCompare || defKeyCompare)},
+                keyCompare: (config && config.keyCompare) || defKeyCompare,
+                hash: (config && config.hash) || hash},
             empty);
 
 /* Mutation
@@ -366,9 +357,6 @@ in
  * 
  * Mutation block allow mutation only for operations performed in that block. You
  * should generally not store the tree while it is in a mutable state.
- * 
- * 
- * 
  ******************************************************************************/
 /**
  * Low level operation that marks a HAMT as mutable.
@@ -688,126 +676,68 @@ alter := \mutable edit n shift f h k ->
 /* Queries
  ******************************************************************************/
 /**
- * Lookup a value.
- * 
- * Returns the value stored for the given hash and key, or alt if none.
+ * Lookup a value using the internal `hash`.
  * 
  * @param alt Fallback value.
- * @param h 32 bit hash.
- * @param k Key.
+ * @param k Key
  * @param m Hashtrie
- */
-tryGetHash := \alt h k m  ->
-    maybe(lookup(m.root, 0, h, k), alt);
-
-/**
- * Lookup a value using the internal `hash`.
- * 
- * @see getHash
  */
 tryGet := \alt k m ->
-    tryGetHash(alt, hash k, k, m);
-
-/**
- * Lookup a value.
- * 
- * Returns the value stored for the given hash an key or null if none.
- * 
- * @param h 32 bit hash.
- * @param k Key.
- * @param m Hashtrie
- */
-getHash := \h k m ->
-    maybe(lookup(m.root, 0, h, k), null);
+    maybe(
+        lookup(m.root, 0, m.config.hash k, k),
+        alt);
 
 /**
  * Lookup a value using the internal `hash`.
  * 
- * @see getHash
- */
-get := \k m ->
-    getHash(hash k, k, m);
-
-/**
- * Does an entry exist?
- * 
- * @param h 32 bit hash.
  * @param k Key.
  * @param m Hashtrie
  */
-hasHash := \h k m ->
-    !isNothing lookup(m.root, 0, h, k);
+get := \k m ->
+     maybe(lookup(m.root, 0, m.config.hash k, k), null);
 
 /**
  * Check if a an entry exists using internal `hash`
  * 
- * @see hashHash
+ * @param k Key.
+ * @param m Hashtrie
  */
 has := \k m ->
-    hasHash(hash k, k, m);
+    !isNothing lookup(m.root, 0, m.config.hash k, k);
 
 /* Single Updates
  ******************************************************************************/
 /**
- * Modify the value stored for a hash.
+ * Alter a value already stored in the map.
  * 
- * Returns the modified data structure. The input `m` is not modified.
- * 
- * @param h 32 bit hash.
  * @param k Key.
  * @param f Function mapping current value to new value.
  * @param m HAMT
  */
-modifyHash := \h k f m ->
+modify := \k f m ->
     Tree.setRoot(
-        alter(m.mutable, m.edit, m.root, 0, f, h, k),
+        alter(m.mutable, m.edit, m.root, 0, f, m.config.hash k, k),
         m);
 
 /**
- * Store a value using the internal `hash` function to calculate the hash from `key`
+ * Store a value in the map.
  * 
- * @see modifyHash
- */
-modify := \k f m ->
-    modifyHash(hash k, k, f, m);
-
-/**
- * Store a value with an explicit hash.
- * 
- * @param h 32 bit hash.
  * @param k Key.
  * @param v Value to store.
  * @param m HAMT
  */
-setHash := \h k v m ->
-    modifyHash(h, k, constant v, m);
-
-/**
- * Store a value using the internal `hash` function to calculate the hash from `key`
- * 
- * @see setHash
- */
 set := \k v m ->
-    setHash(hash k, k, v, m);
+    modify(k, constant v, m);
 
 /**
- * Delete a value with an explicit hash.
+ * Remove a value from the map.
  * 
- * @param m HAMT
- * @param h 32 bit hash.
  * @param k Key.
+ * @param m HAMT
  */
-removeHash := let del = constant nothing in
-    \h k m ->
-        modifyHash(h, k, del, m);
-
-/**
- * Delete a value using the internal `hash` function to calculate the hash from `key`
- * 
- * @see removeHash
- */
-remove := \k m ->
-    removeHash(hash k, k, m);
+remove := let del = constant nothing in
+    \k m ->
+        modify(k, del, m);
 
 
 /* Fold

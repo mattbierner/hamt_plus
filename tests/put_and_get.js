@@ -39,11 +39,12 @@ exports.set_does_not_alter_original = function(test) {
 
 
 exports.collision = function(test) {
-    var h1 = hamt.setHash(0, 'a', 3, hamt.make());
-    var h2 = hamt.setHash(0, 'b', 5, h1);
+    var h = hamt.make({'hash': function() { return 0; }})
+    var h1 = hamt.set('a', 3, h);
+    var h2 = hamt.set('b', 5, h1);
     
-    test.equal(hamt.getHash(0, 'a', h2), 3);
-    test.equal(hamt.getHash(0, 'b', h2), 5);
+    test.equal(hamt.get('a', h2), 3);
+    test.equal(hamt.get('b', h2), 5);
     
     test.done();
 };
