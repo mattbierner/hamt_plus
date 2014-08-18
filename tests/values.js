@@ -9,14 +9,14 @@ var containsAll = function(test, arr, keys) {
 
 exports.empty = function(test) {
     test.deepEqual(
-        hamt.values(hamt.empty),
+        hamt.values(hamt.make()),
         []);
 
     test.done();
 };
 
 exports.simple_keys= function(test) {
-    var h1 = hamt.set('b', 5, hamt.set('a', 3, hamt.empty));
+    var h1 = hamt.set('b', 5, hamt.set('a', 3, hamt.make()));
     
     containsAll(test,
         hamt.values(h1),
@@ -26,7 +26,7 @@ exports.simple_keys= function(test) {
 };
 
 exports.collision = function(test) {
-    var h1 = hamt.setHash(0, 'b', 5, hamt.setHash(0, 'a', 3, hamt.empty));
+    var h1 = hamt.setHash(0, 'b', 5, hamt.setHash(0, 'a', 3, hamt.make()));
         
     containsAll(test,
         hamt.values(h1),
@@ -42,7 +42,7 @@ exports.many = function(test) {
                "t", "J", "E", "q", "v", "M", "T", "N", "L", "K", "Y", "d", "P",
                "u", "I", "O", "`", "X"];
     
-    var h = hamt.empty;
+    var h = hamt.make();
     insert.forEach(function(x) {
         h = hamt.set(x, x, h);
     });

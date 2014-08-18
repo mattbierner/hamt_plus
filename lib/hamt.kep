@@ -6,7 +6,7 @@
 package(
     hash
     
-    empty
+    make
 
 // Queries
     tryGetHash
@@ -155,7 +155,7 @@ hash := \str -> {
 /**
  * Empty node.
  */
-empty := null;
+var empty := null;
 
 /**
  * Leaf holding a value.
@@ -292,6 +292,50 @@ var updateCollisionList = \list f k ->
                         :[v].concat(rest)
                 :[first].concat(updateCollisionList(rest, f, k));
 
+/**
+ * Update an entry in a collision list.
+ */
+var setCollisionList = \list f k -> {
+    for (var i = 0, len = list.length; i < len; ++i)
+    with first = list.(i) in {
+        if (first.key === k)
+        with v = f(first.value) in {
+            if (isNothing v) {
+                list.splice(i, 1);
+            } else {
+                list.(i) = v;
+            }
+            return list;
+        }
+    }
+};
+
+/*
+ ******************************************************************************/
+var Tree := function\mutable config root =self-> {
+    self.mutable = mutable;
+    self.config = config;
+    self.root = root;
+};
+
+Tree.setRoot := \tree root ->
+    new Tree(
+        tree.mutable,
+        tree.config,
+        root);
+
+/**
+ * 
+ */
+make := let
+    defKeyCompare = (===)
+in
+    \config ->
+        new Tree(
+            false, {
+                keyCompare: config && (config.keyCompare || defKeyCompare)},
+            empty);
+
 /* Lookups
  ******************************************************************************/
 var lookup;
@@ -362,6 +406,26 @@ Leaf.prototype.modify := \shift f h k =self->
             :mergeLeaves(shift, self, new Leaf(h, k, v));
 
 /**
+ * Leaf::mutate
+ */
+Leaf.prototype.mutate := \shift f h k =self-> {
+    if (k === self.key) {
+        var v := f(self.value);
+        if (isNothing v)
+            return empty;
+        else
+            self.value = v;
+    } else {
+        var v := f();
+        if (isNothing v)
+            return self;
+        else
+            return mergeLeaves(shift, self, new Leaf(h, k, v));
+    }
+    return self;
+};
+
+/**
  * Collision::modify
  */
 Collision.prototype.modify = \shift f h k =self-> let
@@ -372,6 +436,16 @@ in
         :list.(0);
 
 /**
+ * Collision::mutate
+ */
+Collision.prototype.mutate = \shift f h k =self-> {
+    setCollisionList(self.children, f, k);
+    if (self.children.length <= 1)
+        return self.children.(0);
+    return self;
+};
+
+/**
  * IndexedNode::modify
  */
 IndexedNode.prototype.modify = \shift f h k =self#{children}-> let
@@ -380,7 +454,7 @@ IndexedNode.prototype.modify = \shift f h k =self#{children}-> let
     indx = fromBitmap(self.mask, bit),
     exists = self.mask & bit,
     
-    child = alter(?exists : children.(indx) : empty, shift + SIZE, f, h, k),
+    child = alter(false, ?exists : children.(indx) : empty, shift + SIZE, f, h, k),
     
     removed = exists && isEmpty child,
     added = !exists && !isEmpty child,
@@ -414,12 +488,55 @@ in
         arrayUpdate(indx, child, children));
 
 /**
+ * IndexedNode::mutate
+ */
+IndexedNode.prototype.mutate = \shift f h k =self#{children}-> {
+    var frag := hashFragment(shift, h),
+        bit := toBitmap frag,
+        indx := fromBitmap(self.mask, bit),
+        exists := self.mask & bit,
+        
+        child := alter(true, ?exists : children.(indx) : empty, shift + SIZE, f, h, k),
+        
+        removed := exists && isEmpty child,
+        added := !exists && !isEmpty child,
+        
+        bitmap := ?removed
+            :self.mask & ~bit
+            :?added
+                :self.mask | bit
+                :self.mask;
+    
+    if (!bitmap) {
+        return empty;
+    } else if (removed) {
+        if (children.length <= 2 && isLeaf children.(indx ^ 1)) {
+            // collapse
+            return children.(indx ^ 1);
+        }
+        self.bitmap = bitmap;
+        self.children.splice(indx, 1);
+    } else if (added) {
+        if (self.children.length >= MAX_INDEX_NODE) {
+            return expand(frag, child, self.mask, children);
+        }
+        self.bitmap = bitmap;
+        self.children.splice(indx, 0, child);
+    } else {
+        // modify;
+        self.bitmap = bitmap;
+        self.children.(indx) = child;
+    }
+    return self;
+};
+
+/**
  * ArrayNode::modify
  */
 ArrayNode.prototype.modify = \shift f h k =self-> let
     frag = hashFragment(shift, h),
     child = self.children.(frag),
-    newChild = alter(child, shift + SIZE, f, h, k)
+    newChild = alter(false, child, shift + SIZE, f, h, k)
 in
     ?isEmpty child && !isEmpty newChild
         // add
@@ -434,18 +551,44 @@ in
             :new ArrayNode(
                 self.count - 1,
                 arrayUpdate(frag, empty, self.children))
-    
     // Modify
     :new ArrayNode(
         self.count,
         arrayUpdate(frag, newChild, self.children));
 
-alter := \n shift f h k ->
+/**
+ * ArrayNode::mutate
+ */
+ArrayNode.prototype.mutate = \shift f h k =self-> {
+    var frag := hashFragment(shift, h),
+        child = self.children.(frag),
+        newChild = alter(true, child, shift + SIZE, f, h, k);
+    
+    if (isEmpty child && !isEmpty newChild) {
+        // add
+        self.count = self.count + 1;
+        self.children.(frag) = newChild;
+    } else if (!isEmpty child && isEmpty newChild) {
+        // remove
+        if (self.count - 1 <= MIN_ARRAY_NODE)
+            return pack(frag, self.children);
+        self.count = self.count - 1;
+        self.children.(frag) = empty;
+    } else {
+        // modify
+        self.children.(frag) = newChild;
+    }
+    return self;
+};
+
+alter := \mutate n shift f h k ->
     ?isEmpty n
         :let v = f() in
             ?isNothing v
                 :empty
                 :new Leaf(h, k, v)
+    :?mutate
+        :n.mutate(shift, f, h, k)
         :n.modify(shift, f, h, k);
 
 /* Queries
@@ -461,7 +604,7 @@ alter := \n shift f h k ->
  * @param m Hashtrie
  */
 tryGetHash := \alt h k m  ->
-    maybe(lookup(m, 0, h, k), alt);
+    maybe(lookup(m.root, 0, h, k), alt);
 
 /**
  * Lookup a value using the internal `hash`.
@@ -481,7 +624,7 @@ tryGet := \alt k m ->
  * @param m Hashtrie
  */
 getHash := \h k m ->
-    maybe(lookup(m, 0, h, k), null);
+    maybe(lookup(m.root, 0, h, k), null);
 
 /**
  * Lookup a value using the internal `hash`.
@@ -499,7 +642,7 @@ get := \k m ->
  * @param m Hashtrie
  */
 hasHash := \h k m ->
-    !isNothing lookup(m, 0, h, k);
+    !isNothing lookup(m.root, 0, h, k);
 
 /**
  * Check if a an entry exists using internal `hash`
@@ -522,7 +665,7 @@ has := \k m ->
  * @param m HAMT
  */
 modifyHash := \h k f m ->
-    alter(m, 0, f, h, k);
+    Tree.setRoot(m, alter(m.mutable, m.root, 0, f, h, k));
 
 /**
  * Store a value using the internal `hash` function to calculate the hash from `key`
@@ -626,10 +769,10 @@ ArrayNode.prototype.fold = \f z ={children}-> {
  * @param z Starting value.
  * @param m Hashtrie
  */
-fold := \f z m ->
-    ?isEmpty m
+fold := \f z {root} ->
+    ?isEmpty root
         :z
-        :m.fold(f, z);
+        :root.fold(f, z);
 
 /* Aggregate
  ******************************************************************************/

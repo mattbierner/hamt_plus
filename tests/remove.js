@@ -2,7 +2,7 @@ var hamt = require('../dist_node/hamt');
 
 
 exports.single = function(test) {
-    var h = hamt.set('a', 3, hamt.empty);
+    var h = hamt.set('a', 3, hamt.make());
     test.equal(hamt.get('a', h), 3);
     
     var h1 = hamt.remove('a', h);
@@ -12,12 +12,12 @@ exports.single = function(test) {
 };
 
 exports.remove_on_empty = function(test) {
-    var h = hamt.remove('x', hamt.empty);
+    var h = hamt.remove('x', hamt.make());
     test.done();
 };
 
 exports.delete_one_entry = function(test) {
-    var h1 = hamt.set('b', 5, hamt.set('a', 3, hamt.empty));
+    var h1 = hamt.set('b', 5, hamt.set('a', 3, hamt.make()));
     
     var h2 = hamt.remove('a', h1);
     test.equal(hamt.get('a', h2), null);
@@ -31,7 +31,7 @@ exports.delete_one_entry = function(test) {
 };
 
 exports.remove_does_not_alter_original = function(test) {
-    var h1 = hamt.set('b', 5,hamt.set('a', 3, hamt.empty));
+    var h1 = hamt.set('b', 5,hamt.set('a', 3, hamt.make()));
     
     var h2 = hamt.remove('a', h1);
     
@@ -45,7 +45,7 @@ exports.remove_does_not_alter_original = function(test) {
 };
 
 exports.delete_collision = function(test) {
-    var h1 = hamt.setHash(0, 'b', 5, hamt.setHash(0, 'a', 3, hamt.empty));
+    var h1 = hamt.setHash(0, 'b', 5, hamt.setHash(0, 'a', 3, hamt.make()));
     var h2 = hamt.removeHash(0, 'a', h1);
     
     test.equal(hamt.getHash(0, 'a', h2), null);
@@ -67,7 +67,7 @@ exports.remove_many = function(test) {
                   "k", "V", "N", "l", "X", "A", "]", "s", "Z", "O", "^", "o",
                   "`", "H", "E", "e", "M", "u", "T", "c", "C"];
     
-    var h = hamt.empty;
+    var h = hamt.make();
     insert.forEach(function(x) {
         h = hamt.set(x, x, h);
     });

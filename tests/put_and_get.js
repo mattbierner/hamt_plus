@@ -2,20 +2,20 @@ var hamt = require('../dist_node/hamt');
 
 
 exports.single = function(test) {
-    var h = hamt.set('a', 3, hamt.empty);
+    var h = hamt.set('a', 3, hamt.make());
     test.equal(hamt.get('a', h), 3);
     
     test.done();
 };
 
 exports.get_non_existant_empty = function(test) {
-    test.equal(hamt.get('a', hamt.empty), null);
+    test.equal(hamt.get('a', hamt.make()), null);
     
     test.done();
 };
 
 exports.multiple = function(test) {
-    var h1 = hamt.set('a', 3, hamt.empty);
+    var h1 = hamt.set('a', 3, hamt.make());
     var h2 = hamt.set('b', 5, h1);
     
     test.equal(hamt.get('a', h2), 3);
@@ -25,7 +25,7 @@ exports.multiple = function(test) {
 };
 
 exports.set_does_not_alter_original = function(test) {
-    var h1 = hamt.set('a', 3, hamt.empty);
+    var h1 = hamt.set('a', 3, hamt.make());
     var h2 = hamt.set('b', 5, h1);
     
     test.equal(hamt.get('a', h1), 3);
@@ -39,7 +39,7 @@ exports.set_does_not_alter_original = function(test) {
 
 
 exports.collision = function(test) {
-    var h1 = hamt.setHash(0, 'a', 3, hamt.empty);
+    var h1 = hamt.setHash(0, 'a', 3, hamt.make());
     var h2 = hamt.setHash(0, 'b', 5, h1);
     
     test.equal(hamt.getHash(0, 'a', h2), 3);
@@ -55,7 +55,7 @@ exports.many_unorder = function(test) {
                "t", "J", "E", "q", "v", "M", "T", "N", "L", "K", "Y", "d", "P",
                "u", "I", "O", "`", "X"];
     
-    var h = hamt.empty;
+    var h = hamt.make();
     arr.forEach(function(x) {
         h = hamt.set(x, x, h);
     });
@@ -71,7 +71,7 @@ exports.many_unorder = function(test) {
 };
 
 exports.many_ordered = function(test) {
-    var h = hamt.empty;
+    var h = hamt.make();
     for (var i = 'A'.charCodeAt(0); i < 'z'.charCodeAt(0); ++i) {
         h = hamt.set(String.fromCharCode(i), i, h);
     }
