@@ -110,18 +110,18 @@ var Leaf = (function(edit, hash0, key, value) {
             mergeLeaves((shift + 5), n1, n2)
         ] : ((subH1 < subH2) ? [n1, n2] : [n2, n1])))));
     }),
-    updateCollisionList = (function(list, f, k) {
+    updateCollisionList = (function(eq, list, f, k) {
         var first, rest, v;
-        return ((!list.length) ? [] : ((first = list[0]), (rest = list.slice(1)), ((first.key === k) ? ((v = f(
-            first.value)), ((nothing === v) ? rest : [v].concat(rest))) : [first].concat(
-            updateCollisionList(rest, f, k)))));
+        return ((!list.length) ? [] : ((first = list[0]), (rest = list.slice(1)), (eq(first.key, k) ? ((v = f(first
+            .value)), ((nothing === v) ? rest : [v].concat(rest))) : [first].concat(updateCollisionList(
+            rest, f, k)))));
     }),
-    setCollisionList = (function(list, f, k) {
+    setCollisionList = (function(eq, list, f, k) {
         for (var i = 0, len = list.length;
             (i < len);
             (+i)) {
             var first = list[i];
-            if ((first.key === k)) {
+            if (eq(first.key, k)) {
                 var v = f(first.value);
                 if ((nothing === v)) {
                     list.splice(i, 1);
@@ -148,7 +148,7 @@ var Leaf = (function(edit, hash0, key, value) {
 }));
 (make = (function(config) {
     return new(Tree)(false, 0, ({
-        keyEq: ((config && config.keyCompare) || __seq),
+        keyEq: ((config && config.keyEq) || __seq),
         hash: ((config && config.hash) || hash)
     }), null);
 }));
@@ -201,14 +201,14 @@ var lookup;
     return ((!n) ? nothing : n.lookup(eq, shift, h, k));
 }));
 var alter;
-(Leaf.prototype.modify = (function(shift, f, h, k) {
+(Leaf.prototype.modify = (function(eq, shift, f, h, k) {
     var v, v0, self = this;
-    return ((k === self.key) ? ((v = f(self.value)), ((nothing === v) ? null : new(Leaf)(0, h, k, v))) : ((v0 =
+    return (eq(self.key, k) ? ((v = f(self.value)), ((nothing === v) ? null : new(Leaf)(0, h, k, v))) : ((v0 =
         f()), ((nothing === v0) ? self : mergeLeaves(shift, self, new(Leaf)(0, h, k, v0)))));
 }));
-(Leaf.prototype.mutate = (function(edit, shift, f, h, k) {
+(Leaf.prototype.mutate = (function(eq, edit, shift, f, h, k) {
     var self = this;
-    if ((k === self.key)) {
+    if (eq(self.key, k)) {
         var v = f(self.value);
         if ((nothing === v)) return null;
         if ((edit === self.edit)) {
@@ -221,23 +221,23 @@ var alter;
     var v0 = f();
     return ((nothing === v0) ? self : mergeLeaves(shift, self, new(Leaf)(edit, h, k, v0)));
 }));
-(Collision.prototype.modify = (function(shift, f, h, k) {
+(Collision.prototype.modify = (function(eq, shift, f, h, k) {
     var self = this,
-        list = updateCollisionList(self.children, f, k);
+        list = updateCollisionList(eq, self.children, f, k);
     return ((list.length > 1) ? new(Collision)(0, self.hash, list) : list[0]);
 }));
-(Collision.prototype.mutate = (function(edit, shift, f, h, k) {
+(Collision.prototype.mutate = (function(eq, edit, shift, f, h, k) {
     var self = this;
     if ((edit != self.edit)) {
-        var m = self.modify(shift, f, h, k);
+        var m = self.modify(eq, shift, f, h, k);
         (m.edit = edit);
         return m;
     }
-    setCollisionList(self.children, f, k);
+    setCollisionList(eq, self.children, f, k);
     if ((self.children.length <= 1)) return self.children[0];
     return self;
 }));
-(IndexedNode.prototype.modify = (function(shift, f, h, k) {
+(IndexedNode.prototype.modify = (function(eq, shift, f, h, k) {
     var self = this,
         children = self["children"],
         frag = ((h >>> shift) & mask),
@@ -245,7 +245,7 @@ var alter;
         bitmap = self.mask,
         indx = popcount((bitmap & (bit - 1))),
         exists = (self.mask & bit),
-        child = alter(false, 0, (exists ? children[indx] : null), (shift + 5), f, h, k),
+        child = alter(eq, false, 0, (exists ? children[indx] : null), (shift + 5), f, h, k),
         removed = (exists && (!child)),
         added = ((!exists) && (!(!child))),
         bitmap0 = (removed ? (self.mask & (~bit)) : (added ? (self.mask | bit) : self.mask));
@@ -255,12 +255,12 @@ var alter;
         new(IndexedNode)(0, bitmap0, arraySpliceIn(indx, child, children))) : new(IndexedNode)(0,
         bitmap0, arrayUpdate(indx, child, children)))));
 }));
-(IndexedNode.prototype.mutate = (function(edit, shift, f, h, k) {
+(IndexedNode.prototype.mutate = (function(eq, edit, shift, f, h, k) {
     var self = this,
         children = self["children"],
         bitmap;
     if ((edit != self.edit)) {
-        var m = self.modify(shift, f, h, k);
+        var m = self.modify(eq, shift, f, h, k);
         (m.edit = edit);
         return m;
     }
@@ -268,7 +268,7 @@ var alter;
         bit = (1 << frag),
         indx = ((bitmap = self.mask), popcount((bitmap & (bit - 1)))),
         exists = (self.mask & bit),
-        child = alter(true, edit, (exists ? children[indx] : null), (shift + 5), f, h, k),
+        child = alter(eq, true, edit, (exists ? children[indx] : null), (shift + 5), f, h, k),
         removed = (exists && (!child)),
         added = ((!exists) && (!(!child))),
         bitmap0 = (removed ? (self.mask & (~bit)) : (added ? (self.mask | bit) : self.mask));
@@ -292,27 +292,27 @@ var alter;
     }
     return self;
 }));
-(ArrayNode.prototype.modify = (function(shift, f, h, k) {
+(ArrayNode.prototype.modify = (function(eq, shift, f, h, k) {
     var self = this,
         frag = ((h >>> shift) & mask),
         child = self.children[frag],
-        newChild = alter(false, 0, child, (shift + 5), f, h, k);
+        newChild = alter(eq, false, 0, child, (shift + 5), f, h, k);
     return (((!child) && (!(!newChild))) ? new(ArrayNode)(0, (self.count + 1), arrayUpdate(frag, newChild, self
         .children)) : (((!(!child)) && (!newChild)) ? (((self.count - 1) <= MIN_ARRAY_NODE) ? pack(frag,
             self.children) : new(ArrayNode)(0, (self.count - 1), arrayUpdate(frag, null, self.children))) :
         new(ArrayNode)(0, self.count, arrayUpdate(frag, newChild, self.children))));
 }));
-(ArrayNode.prototype.mutate = (function(edit, shift, f, h, k) {
+(ArrayNode.prototype.mutate = (function(eq, edit, shift, f, h, k) {
     var self = this,
         x, x0, x1, x2;
     if ((edit != self.edit)) {
-        var m = self.modify(shift, f, h, k);
+        var m = self.modify(eq, shift, f, h, k);
         (m.edit = edit);
         return m;
     }
     var frag = ((h >>> shift) & mask),
         child = self.children[frag],
-        newChild = alter(true, edit, child, (shift + 5), f, h, k);
+        newChild = alter(eq, true, edit, child, (shift + 5), f, h, k);
     if ((((x = child), (!x)) && (!((x0 = newChild), (!x0))))) {
         (self.count = (self.count + 1));
         (self.children[frag] = newChild);
@@ -325,10 +325,10 @@ var alter;
     }
     return self;
 }));
-(alter = (function(mutable, edit, n, shift, f, h, k) {
+(alter = (function(eq, mutable, edit, n, shift, f, h, k) {
     var v;
-    return ((!n) ? ((v = f()), ((nothing === v) ? null : new(Leaf)(0, h, k, v))) : (edit ? n.mutate(edit, shift,
-        f, h, k) : n.modify(shift, f, h, k)));
+    return ((!n) ? ((v = f()), ((nothing === v) ? null : new(Leaf)(0, h, k, v))) : (edit ? n.mutate(eq, edit,
+        shift, f, h, k) : n.modify(eq, shift, f, h, k)));
 }));
 (tryGet = (function(alt, k, m) {
     var eq = m.config.keyEq,
@@ -350,27 +350,28 @@ var alter;
         0, h, k))), (y = ((nothing === val) ? nothing : val)), (nothing === y)));
 }));
 (modify = (function(k, f, m) {
-    var edit, n, h, v;
-    return Tree.setRoot(((edit = m.edit), (n = m.root), (h = m.config.hash(k)), ((!n) ? ((v = f()), ((nothing ===
-        v) ? null : new(Leaf)(0, h, k, v))) : (edit ? n.mutate(edit, 0, f, h, k) : n.modify(0, f, h,
-        k)))), m);
+    var eq, edit, n, h, v;
+    return Tree.setRoot(((eq = m.config.keyEq), (edit = m.edit), (n = m.root), (h = m.config.hash(k)), ((!n) ?
+        ((v = f()), ((nothing === v) ? null : new(Leaf)(0, h, k, v))) : (edit ? n.mutate(eq, edit, 0, f,
+            h, k) : n.modify(eq, 0, f, h, k)))), m);
 }));
 (set = (function(k, v, m) {
     var f = (function() {
         return v;
     }),
-        edit, n, h;
-    return Tree.setRoot(((edit = m.edit), (n = m.root), (h = m.config.hash(k)), ((!n) ? ((nothing === v) ? null :
-        new(Leaf)(0, h, k, v)) : (edit ? n.mutate(edit, 0, f, h, k) : n.modify(0, f, h, k)))), m);
+        eq, edit, n, h;
+    return Tree.setRoot(((eq = m.config.keyEq), (edit = m.edit), (n = m.root), (h = m.config.hash(k)), ((!n) ?
+        ((nothing === v) ? null : new(Leaf)(0, h, k, v)) : (edit ? n.mutate(eq, edit, 0, f, h, k) : n.modify(
+            eq, 0, f, h, k)))), m);
 }));
 var del = (function() {
     return nothing;
 });
 (remove = (function(k, m) {
-    var edit, n, h;
-    return Tree.setRoot(((edit = m.edit), (n = m.root), (h = m.config.hash(k)), ((!n) ? ((nothing === nothing) ?
-        null : new(Leaf)(0, h, k, nothing)) : (edit ? n.mutate(edit, 0, del, h, k) : n.modify(0,
-        del, h, k)))), m);
+    var eq, edit, n, h;
+    return Tree.setRoot(((eq = m.config.keyEq), (edit = m.edit), (n = m.root), (h = m.config.hash(k)), ((!n) ?
+        ((nothing === nothing) ? null : new(Leaf)(0, h, k, nothing)) : (edit ? n.mutate(eq, edit, 0,
+            del, h, k) : n.modify(eq, 0, del, h, k)))), m);
 }));
 (Leaf.prototype.fold = (function(f, z) {
     var self = this;

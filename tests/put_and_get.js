@@ -37,6 +37,31 @@ exports.set_does_not_alter_original = function(test) {
     test.done();
 };
 
+exports.custom_keys = function(test) {
+    var h = hamt.make({
+        keyEq: function(x, y) {
+            if (x.length !== y.length)
+                return false;
+            for (var i = 0, len = x.length; i < len; ++i)
+                if (x[i] !== y[i])
+                    return false;
+            return true;
+        },
+        hash: function(x) {
+            return hamt.hash(x.join(','));
+        }
+    })
+    var h1 = hamt.set([1], 3, h);
+    var h2 = hamt.set([1, 2, 3], 5, h1);
+    var h3 = hamt.set([4, 5, 6], 7, h2);
+
+    test.equal(hamt.get([1], h2), 3);
+    test.equal(hamt.get([1, 2, 3], h2), 5);
+    test.equal(hamt.get([4, 5, 6], h3), 7);
+
+    test.done();
+};
+
 
 exports.collision = function(test) {
     var h = hamt.make({'hash': function() { return 0; }})

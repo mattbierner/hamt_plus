@@ -283,11 +283,11 @@ in
 /**
  * Update an entry in a collision list.
  */
-var updateCollisionList = \list f k ->
+var updateCollisionList = \eq list f k ->
     ? !list.length
         :[]
         :let first = list.(0), rest = list.slice(1) in
-            ?first.key === k
+            ?eq(first.key, k)
                 :let v = f(first.value) in
                     ?isNothing v
                         :rest
@@ -297,10 +297,10 @@ var updateCollisionList = \list f k ->
 /**
  * Update an entry in a collision list.
  */
-var setCollisionList = \list f k -> {
+var setCollisionList = \eq list f k -> {
     for (var i = 0, len = list.length; i < len; ++i)
     with first = list.(i) in {
-        if (first.key === k)
+        if (eq(first.key, k))
         with v = f(first.value) in {
             if (isNothing v) {
                 list.splice(i, 1);
@@ -345,7 +345,7 @@ in
         new Tree(
             false,
             0, {
-                keyEq: (config && config.keyCompare) || defKeyCompare,
+                keyEq: (config && config.keyEq) || defKeyCompare,
                 hash: (config && config.hash) || hash
             },
             empty);
@@ -458,8 +458,8 @@ var alter;
 /**
  * Leaf::modify
  */
-Leaf.prototype.modify := \shift f h k =self->
-    ?k === self.key
+Leaf.prototype.modify := \eq shift f h k =self->
+    ?eq(self.key, k)
         :let v = f(self.value) in
             ?isNothing v
                 :empty
@@ -472,8 +472,8 @@ Leaf.prototype.modify := \shift f h k =self->
 /**
  * Leaf::mutate
  */
-Leaf.prototype.mutate := \edit shift f h k =self-> {
-    if (k === self.key) {
+Leaf.prototype.mutate := \eq edit shift f h k =self-> {
+    if (eq(self.key, k)) {
         var v := f(self.value);
         if (isNothing v)
             return empty;
@@ -495,8 +495,8 @@ Leaf.prototype.mutate := \edit shift f h k =self-> {
 /**
  * Collision::modify
  */
-Collision.prototype.modify = \shift f h k =self-> let
-    list = updateCollisionList(self.children, f, k)
+Collision.prototype.modify = \eq shift f h k =self-> let
+    list = updateCollisionList(eq, self.children, f, k)
 in
     ?list.length > 1
         :new Collision(0, self.hash, list)
@@ -505,14 +505,14 @@ in
 /**
  * Collision::mutate
  */
-Collision.prototype.mutate = \edit shift f h k =self-> {
+Collision.prototype.mutate = \eq edit shift f h k =self-> {
     if (edit != self.edit) {
-        var m = self.modify(shift, f, h, k);
+        var m = self.modify(eq, shift, f, h, k);
         m.edit = edit;
         return m;
     }
     
-    setCollisionList(self.children, f, k);
+    setCollisionList(eq, self.children, f, k);
     if (self.children.length <= 1)
         return self.children.(0);
     return self;
@@ -521,13 +521,13 @@ Collision.prototype.mutate = \edit shift f h k =self-> {
 /**
  * IndexedNode::modify
  */
-IndexedNode.prototype.modify = \shift f h k =self#{children}-> let
+IndexedNode.prototype.modify = \eq shift f h k =self#{children}-> let
     frag = hashFragment(shift, h),
     bit = toBitmap frag,
     indx = fromBitmap(self.mask, bit),
     exists = self.mask & bit,
     
-    child = alter(false, 0, ?exists : children.(indx) : empty, shift + SIZE, f, h, k),
+    child = alter(eq, false, 0, ?exists : children.(indx) : empty, shift + SIZE, f, h, k),
     
     removed = exists && isEmpty child,
     added = !exists && !isEmpty child,
@@ -566,9 +566,9 @@ in
 /**
  * IndexedNode::mutate
  */
-IndexedNode.prototype.mutate = \edit shift f h k =self#{children}-> {
+IndexedNode.prototype.mutate = \eq edit shift f h k =self#{children}-> {
     if (edit != self.edit) {
-        var m = self.modify(shift, f, h, k);
+        var m = self.modify(eq, shift, f, h, k);
         m.edit = edit;
         return m;
     }
@@ -578,7 +578,7 @@ IndexedNode.prototype.mutate = \edit shift f h k =self#{children}-> {
         indx := fromBitmap(self.mask, bit),
         exists := self.mask & bit,
         
-        child := alter(true, edit, ?exists : children.(indx) : empty, shift + SIZE, f, h, k),
+        child := alter(eq, true, edit, ?exists : children.(indx) : empty, shift + SIZE, f, h, k),
         
         removed := exists && isEmpty child,
         added := !exists && !isEmpty child,
@@ -615,10 +615,10 @@ IndexedNode.prototype.mutate = \edit shift f h k =self#{children}-> {
 /**
  * ArrayNode::modify
  */
-ArrayNode.prototype.modify = \shift f h k =self-> let
+ArrayNode.prototype.modify = \eq shift f h k =self-> let
     frag = hashFragment(shift, h),
     child = self.children.(frag),
-    newChild = alter(false, 0, child, shift + SIZE, f, h, k)
+    newChild = alter(eq, false, 0, child, shift + SIZE, f, h, k)
 in
     ?isEmpty child && !isEmpty newChild
         // add
@@ -644,16 +644,16 @@ in
 /**
  * ArrayNode::mutate
  */
-ArrayNode.prototype.mutate = \edit shift f h k =self-> {
+ArrayNode.prototype.mutate = \eq edit shift f h k =self-> {
     if (edit != self.edit) {
-        var m = self.modify(shift, f, h, k);
+        var m = self.modify(eq, shift, f, h, k);
         m.edit = edit;
         return m;
     }
     
     var frag := hashFragment(shift, h),
         child = self.children.(frag),
-        newChild = alter(true, edit, child, shift + SIZE, f, h, k);
+        newChild = alter(eq, true, edit, child, shift + SIZE, f, h, k);
     
     if (isEmpty child && !isEmpty newChild) {
         // add
@@ -672,15 +672,15 @@ ArrayNode.prototype.mutate = \edit shift f h k =self-> {
     return self;
 };
 
-alter := \mutable edit n shift f h k ->
+alter := \eq mutable edit n shift f h k ->
     ?isEmpty n
         :let v = f() in
             ?isNothing v
                 :empty
                 :new Leaf(0, h, k, v)
     :?edit
-        :n.mutate(edit, shift, f, h, k)
-        :n.modify(shift, f, h, k);
+        :n.mutate(eq, edit, shift, f, h, k)
+        :n.modify(eq, shift, f, h, k);
 
 /* Queries
  ******************************************************************************/
@@ -731,7 +731,15 @@ has := \k m ->
  */
 modify := \k f m ->
     Tree.setRoot(
-        alter(m.mutable, m.edit, m.root, 0, f, m.config.hash k, k),
+        alter(
+            m.config.keyEq,
+            m.mutable,
+            m.edit,
+            m.root,
+            0,
+            f,
+            m.config.hash k,
+            k),
         m);
 
 /**
