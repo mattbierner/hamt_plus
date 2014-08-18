@@ -323,11 +323,16 @@ var Tree := function\mutable config root =self-> {
     self.root = root;
 };
 
-Tree.setRoot := \tree root ->
-    new Tree(
+Tree.setRoot := \root tree -> {
+    if (tree.mutable) {
+        tree.root = root;
+        return tree;
+    }
+    return new Tree(
         tree.mutable,
         tree.config,
         root);
+};
 
 Tree.setMutable := \mutable tree ->
     new Tree(
@@ -697,7 +702,9 @@ has := \k m ->
  * @param m HAMT
  */
 modifyHash := \h k f m ->
-    Tree.setRoot(m, alter(m.mutable, m.root, 0, f, h, k));
+    Tree.setRoot(
+        alter(m.mutable, m.root, 0, f, h, k),
+        m);
 
 /**
  * Store a value using the internal `hash` function to calculate the hash from `key`

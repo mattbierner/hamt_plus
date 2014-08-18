@@ -136,7 +136,11 @@ var Leaf = (function(hash0, key, value) {
         (self.config = config);
         (self.root = root);
     });
-(Tree.setRoot = (function(tree, root) {
+(Tree.setRoot = (function(root, tree) {
+    if (tree.mutable) {
+        (tree.root = root);
+        return tree;
+    }
     return new(Tree)(tree.mutable, tree.config, root);
 }));
 (Tree.setMutable = (function(mutable, tree) {
@@ -332,22 +336,22 @@ var alter;
 }));
 (modifyHash = (function(h, k, f, m) {
     var mutate0, n, v;
-    return Tree.setRoot(m, ((mutate0 = m.mutable), (n = m.root), ((!n) ? ((v = f()), ((nothing === v) ? null :
-        new(Leaf)(h, k, v))) : (mutate0 ? n.mutate(0, f, h, k) : n.modify(0, f, h, k)))));
+    return Tree.setRoot(((mutate0 = m.mutable), (n = m.root), ((!n) ? ((v = f()), ((nothing === v) ? null : new(
+        Leaf)(h, k, v))) : (mutate0 ? n.mutate(0, f, h, k) : n.modify(0, f, h, k)))), m);
 }));
 (modify = (function(k, f, m) {
     var h = hash(k),
         mutate0, n, v;
-    return Tree.setRoot(m, ((mutate0 = m.mutable), (n = m.root), ((!n) ? ((v = f()), ((nothing === v) ? null :
-        new(Leaf)(h, k, v))) : (mutate0 ? n.mutate(0, f, h, k) : n.modify(0, f, h, k)))));
+    return Tree.setRoot(((mutate0 = m.mutable), (n = m.root), ((!n) ? ((v = f()), ((nothing === v) ? null : new(
+        Leaf)(h, k, v))) : (mutate0 ? n.mutate(0, f, h, k) : n.modify(0, f, h, k)))), m);
 }));
 (setHash = (function(h, k, v, m) {
     var f = (function() {
         return v;
     }),
         mutate0, n;
-    return Tree.setRoot(m, ((mutate0 = m.mutable), (n = m.root), ((!n) ? ((nothing === v) ? null : new(Leaf)(h,
-        k, v)) : (mutate0 ? n.mutate(0, f, h, k) : n.modify(0, f, h, k)))));
+    return Tree.setRoot(((mutate0 = m.mutable), (n = m.root), ((!n) ? ((nothing === v) ? null : new(Leaf)(h, k,
+        v)) : (mutate0 ? n.mutate(0, f, h, k) : n.modify(0, f, h, k)))), m);
 }));
 (set = (function(k, v, m) {
     var h = hash(k),
@@ -355,16 +359,16 @@ var alter;
             return v;
         }),
         mutate0, n;
-    return Tree.setRoot(m, ((mutate0 = m.mutable), (n = m.root), ((!n) ? ((nothing === v) ? null : new(Leaf)(h,
-        k, v)) : (mutate0 ? n.mutate(0, f, h, k) : n.modify(0, f, h, k)))));
+    return Tree.setRoot(((mutate0 = m.mutable), (n = m.root), ((!n) ? ((nothing === v) ? null : new(Leaf)(h, k,
+        v)) : (mutate0 ? n.mutate(0, f, h, k) : n.modify(0, f, h, k)))), m);
 }));
 var del = (function() {
     return nothing;
 });
 (removeHash = (function(h, k, m) {
     var mutate0, n;
-    return Tree.setRoot(m, ((mutate0 = m.mutable), (n = m.root), ((!n) ? ((nothing === nothing) ? null : new(
-        Leaf)(h, k, nothing)) : (mutate0 ? n.mutate(0, del, h, k) : n.modify(0, del, h, k)))));
+    return Tree.setRoot(((mutate0 = m.mutable), (n = m.root), ((!n) ? ((nothing === nothing) ? null : new(Leaf)
+        (h, k, nothing)) : (mutate0 ? n.mutate(0, del, h, k) : n.modify(0, del, h, k)))), m);
 }));
 (remove = (function(k, m) {
     return removeHash(hash(k), k, m);
