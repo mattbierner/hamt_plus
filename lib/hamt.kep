@@ -165,11 +165,13 @@ var empty := null;
 /**
  * Leaf holding a value.
  * 
+ * @member edit 
  * @member hash Hash of key.
  * @member key Key.
  * @member value Value stored.
  */
-var Leaf := function \hash key value =self-> {
+var Leaf := function \edit hash key value =self-> {
+    self.edit = edit;
     self.hash = hash;
     self.key = key;
     self.value = value;
@@ -317,7 +319,7 @@ var setCollisionList = \list f k -> {
 
 /* Definition
  ******************************************************************************/
-var Tree := function\mutable config root =self-> {
+var Tree := function \mutable config root =self-> {
     self.mutable = mutable;
     self.config = config;
     self.root = root;
@@ -368,7 +370,7 @@ beginMutation :=  Tree.setMutable @ true;
 endMutation :=  Tree.setMutable @ false;
 
 /**
- * 
+ * Perform operations in `f` on a mutable version of `m`.
  */
 mutate := \f m -> {
     var t = beginMutation(m);
@@ -439,16 +441,16 @@ Leaf.prototype.modify := \shift f h k =self->
         :let v = f(self.value) in
             ?isNothing v
                 :empty
-                :new Leaf(h, k, v)
+                :new Leaf(0, h, k, v)
     :let v = f() in
         ?isNothing v
             :self
-            :mergeLeaves(shift, self, new Leaf(h, k, v));
+            :mergeLeaves(shift, self, new Leaf(0, h, k, v));
 
 /**
  * Leaf::mutate
  */
-Leaf.prototype.mutate := \shift f h k =self-> {
+Leaf.prototype.mutate := \edit shift f h k =self-> {
     if (k === self.key) {
         var v := f(self.value);
         if (isNothing v)
@@ -459,7 +461,7 @@ Leaf.prototype.mutate := \shift f h k =self-> {
     return let v := f() in
         ?isNothing v
             :self
-            :mergeLeaves(shift, self, new Leaf(h, k, v));
+            :mergeLeaves(shift, self, new Leaf(edit, h, k, v));
 };
 
 /**
@@ -475,7 +477,7 @@ in
 /**
  * Collision::mutate
  */
-Collision.prototype.mutate = \shift f h k =self-> {
+Collision.prototype.mutate = \edit shift f h k =self-> {
     setCollisionList(self.children, f, k);
     if (self.children.length <= 1)
         return self.children.(0);
@@ -491,7 +493,7 @@ IndexedNode.prototype.modify = \shift f h k =self#{children}-> let
     indx = fromBitmap(self.mask, bit),
     exists = self.mask & bit,
     
-    child = alter(false, ?exists : children.(indx) : empty, shift + SIZE, f, h, k),
+    child = alter(false, 0, ?exists : children.(indx) : empty, shift + SIZE, f, h, k),
     
     removed = exists && isEmpty child,
     added = !exists && !isEmpty child,
@@ -527,13 +529,13 @@ in
 /**
  * IndexedNode::mutate
  */
-IndexedNode.prototype.mutate = \shift f h k =self#{children}-> {
+IndexedNode.prototype.mutate = \edit shift f h k =self#{children}-> {
     var frag := hashFragment(shift, h),
         bit := toBitmap frag,
         indx := fromBitmap(self.mask, bit),
         exists := self.mask & bit,
         
-        child := alter(true, ?exists : children.(indx) : empty, shift + SIZE, f, h, k),
+        child := alter(true, edit, ?exists : children.(indx) : empty, shift + SIZE, f, h, k),
         
         removed := exists && isEmpty child,
         added := !exists && !isEmpty child,
@@ -573,7 +575,7 @@ IndexedNode.prototype.mutate = \shift f h k =self#{children}-> {
 ArrayNode.prototype.modify = \shift f h k =self-> let
     frag = hashFragment(shift, h),
     child = self.children.(frag),
-    newChild = alter(false, child, shift + SIZE, f, h, k)
+    newChild = alter(false, 0, child, shift + SIZE, f, h, k)
 in
     ?isEmpty child && !isEmpty newChild
         // add
@@ -596,10 +598,10 @@ in
 /**
  * ArrayNode::mutate
  */
-ArrayNode.prototype.mutate = \shift f h k =self-> {
+ArrayNode.prototype.mutate = \edit shift f h k =self-> {
     var frag := hashFragment(shift, h),
         child = self.children.(frag),
-        newChild = alter(true, child, shift + SIZE, f, h, k);
+        newChild = alter(true, edit, child, shift + SIZE, f, h, k);
     
     if (isEmpty child && !isEmpty newChild) {
         // add
@@ -618,14 +620,14 @@ ArrayNode.prototype.mutate = \shift f h k =self-> {
     return self;
 };
 
-alter := \mutate n shift f h k ->
+alter := \mutable edit n shift f h k ->
     ?isEmpty n
         :let v = f() in
             ?isNothing v
                 :empty
-                :new Leaf(h, k, v)
-    :?mutate
-        :n.mutate(shift, f, h, k)
+                :new Leaf(0, h, k, v)
+    :?edit
+        :n.mutate(edit, shift, f, h, k)
         :n.modify(shift, f, h, k);
 
 /* Queries
@@ -703,7 +705,7 @@ has := \k m ->
  */
 modifyHash := \h k f m ->
     Tree.setRoot(
-        alter(m.mutable, m.root, 0, f, h, k),
+        alter(m.mutable, m.edit, m.root, 0, f, h, k),
         m);
 
 /**

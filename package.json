@@ -1,10 +1,11 @@
 {
-    "name": "hamt",
-    "version": "0.1.4",
-    "description": "Hash Array Mapped Trie",
+    "name": "hamt_plus",
+    "version": "0.0.0",
+    "description": "Fork of HAMT that adds a transaction interface and support for custom key types",
     "keywords": [
         "trie",
-	"map",
+        "hamt"
+        "map",
         "persistent",
         "data structure",
         "hash"
@@ -13,7 +14,7 @@
     "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "https://github.com/mattbierner/hamt.git"
+        "url": "https://github.com/mattbierner/hamt_plus.git"
     },
     
     "main": "dist_node/hamt.js",
