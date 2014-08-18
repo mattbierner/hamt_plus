@@ -21,12 +21,37 @@ exports.simple_keys= function(test) {
     test.done();
 };
 
-exports.collision = function(test) {
-    var h1 = hamt.setHash(0, 'b', 5, hamt.setHash(0, 'a', 3, hamt.make()));
-        
-    containsAll(test,
-        hamt.values(h1),
-        [5, 3]);
+exports.does_not_effect_pre_value = function(test) {
+    var h = hamt.set('a', 100, hamt.make());
+    
+    var h1 = hamt.mutate(function(m) {
+        hamt.set('a', 3, m);
+        hamt.set('b', 5, m);
+    }, h);
+    
+    test.equal(hamt.get('a', h), 100);
+    test.equal(hamt.get('a', h1), 3);
+
+    test.equal(hamt.get('b', h), null);
+    test.equal(hamt.get('b', h1), 5);
+    
+    test.done();
+};
+
+exports.does_not_effect_post_value = function(test) {    
+    var h = hamt.mutate(function(m) {
+        hamt.set('a', 3, m);
+        hamt.set('b', 5, m);
+    }, hamt.make());
+    
+    var h1 = hamt.set('a', 100, h);
+
+    
+    test.equal(hamt.get('a', h), 3);
+    test.equal(hamt.get('a', h1), 100);
+
+    test.equal(hamt.get('b', h), 5);
+    test.equal(hamt.get('b', h1), 5);
     
     test.done();
 };

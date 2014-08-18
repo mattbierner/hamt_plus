@@ -4,7 +4,7 @@
     "description": "Fork of HAMT that adds a transaction interface and support for custom key types",
     "keywords": [
         "trie",
-        "hamt"
+        "hamt",
         "map",
         "persistent",
         "data structure",

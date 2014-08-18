@@ -180,10 +180,11 @@ var Leaf := function \edit hash key value =self-> {
 /**
  * Leaf holding multiple values with the same hash but different keys.
  * 
+ * @member edit 
  * @member hash Hash of key.
  * @member children Array of collision children node.
  */
-var Collision := function \hash children =self-> {
+var Collision := function \edit hash children =self-> {
     self.hash = hash;
     self.children = children;
 };
@@ -193,10 +194,12 @@ var Collision := function \hash children =self-> {
  * 
  * Uses a bitmap and array to pack children.
  * 
+ * @member edit
  * @member mask Bitmap that encode the positions of children in the array.
  * @member children Array of child nodes.
  */
-var IndexedNode := function \mask children =self-> {
+var IndexedNode := function \edit mask children =self-> {
+    self.edit = edit;
     self.mask = mask;
     self.children = children;
 };
@@ -204,10 +207,12 @@ var IndexedNode := function \mask children =self-> {
 /**
  * Internal node with many children.
  * 
+ * @member edit
  * @member count Number of children.
  * @member children Array of child nodes.
  */
-var ArrayNode := function \count children =self-> {
+var ArrayNode := function \edit count children =self-> {
+    self.edit = edit;
     self.count = count;
     self.children = children;
 };
@@ -243,7 +248,7 @@ var expand = \frag child bitmap subNodes -> {
         bit = bit >>> 1;
     }
     arr.(frag) = child;
-    return new ArrayNode(count + 1, arr);
+    return new ArrayNode(0, count + 1, arr);
 };
 
 /**
@@ -260,7 +265,7 @@ var pack = \removed elements -> {
             bitmap = bitmap | (1 << i);
         }
     }
-    return new IndexedNode(bitmap, children);
+    return new IndexedNode(0, bitmap, children);
 };
 
 /**
@@ -275,12 +280,12 @@ var mergeLeaves = \shift n1 n2 -> let
     h2 = n2.hash
 in
     ?h1 === h2
-        :new Collision(h1, [n2, n1])
+        :new Collision(0, h1, [n2, n1])
         :let
             subH1 = hashFragment(shift, h1),
             subH2 = hashFragment(shift, h2)
         in
-            new IndexedNode(toBitmap subH1 | toBitmap subH2,
+            new IndexedNode(0, toBitmap subH1 | toBitmap subH2,
                 ?subH1 === subH2
                     :[mergeLeaves(shift + SIZE, n1, n2)]
                     :?subH1 < subH2 : [n1, n2] : [n2, n1]);
@@ -319,8 +324,9 @@ var setCollisionList = \list f k -> {
 
 /* Definition
  ******************************************************************************/
-var Tree := function \mutable config root =self-> {
+var Tree := function \mutable edit config root =self-> {
     self.mutable = mutable;
+    self.edit = edit;
     self.config = config;
     self.root = root;
 };
@@ -332,15 +338,10 @@ Tree.setRoot := \root tree -> {
     }
     return new Tree(
         tree.mutable,
+        tree.edit,
         tree.config,
         root);
 };
-
-Tree.setMutable := \mutable tree ->
-    new Tree(
-        mutable,
-        tree.config,
-        tree.root);
 
 /**
  * 
@@ -350,7 +351,9 @@ make := let
 in
     \config ->
         new Tree(
-            false, {
+            false,
+            0,
+            {
                 keyCompare: config && (config.keyCompare || defKeyCompare)},
             empty);
 
@@ -366,8 +369,19 @@ in
  * 
  * @param ht HAMT
  */
-beginMutation :=  Tree.setMutable @ true;
-endMutation :=  Tree.setMutable @ false;
+beginMutation := \tree ->
+    new Tree(
+        true,
+        tree.edit + 1,
+        tree.config,
+        tree.root);
+
+endMutation := \tree ->
+     new Tree(
+        false,
+        tree.edit,
+        tree.config,
+        tree.root);
 
 /**
  * Perform operations in `f` on a mutable version of `m`.
@@ -455,9 +469,15 @@ Leaf.prototype.mutate := \edit shift f h k =self-> {
         var v := f(self.value);
         if (isNothing v)
             return empty;
-        self.value = v;
-        return self;
+        
+        if (edit === self.edit) {
+            self.value = v;
+            return self;
+        } else {
+            return new Leaf(edit, h, k, v);
+        }
     }
+    
     return let v := f() in
         ?isNothing v
             :self
@@ -471,13 +491,19 @@ Collision.prototype.modify = \shift f h k =self-> let
     list = updateCollisionList(self.children, f, k)
 in
     ?list.length > 1
-        :new Collision(self.hash, list)
+        :new Collision(0, self.hash, list)
         :list.(0);
 
 /**
  * Collision::mutate
  */
 Collision.prototype.mutate = \edit shift f h k =self-> {
+    if (edit != self.edit) {
+        var m = self.modify(shift, f, h, k);
+        m.edit = edit;
+        return m;
+    }
+    
     setCollisionList(self.children, f, k);
     if (self.children.length <= 1)
         return self.children.(0);
@@ -511,6 +537,7 @@ in
         :?children.length <= 2 && isLeaf children.(indx ^ 1)
             :children.(indx ^ 1) // collapse
             :new IndexedNode(
+                0,
                 bitmap,
                 arraySpliceOut(indx, self.children))
             
@@ -518,11 +545,13 @@ in
         :?self.children.length >= MAX_INDEX_NODE
             :expand(frag, child, self.mask, children)
             :new IndexedNode(
+                0,
                 bitmap,
                 arraySpliceIn(indx, child, children))
     
     // Modify
     :new IndexedNode(
+        0,
         bitmap,
         arrayUpdate(indx, child, children));
 
@@ -530,6 +559,12 @@ in
  * IndexedNode::mutate
  */
 IndexedNode.prototype.mutate = \edit shift f h k =self#{children}-> {
+    if (edit != self.edit) {
+        var m = self.modify(shift, f, h, k);
+        m.edit = edit;
+        return m;
+    }
+    
     var frag := hashFragment(shift, h),
         bit := toBitmap frag,
         indx := fromBitmap(self.mask, bit),
@@ -580,6 +615,7 @@ in
     ?isEmpty child && !isEmpty newChild
         // add
         :new ArrayNode(
+            0,
             self.count + 1,
             arrayUpdate(frag, newChild, self.children))
     
@@ -588,10 +624,12 @@ in
         :?self.count - 1 <= MIN_ARRAY_NODE
             :pack(frag, self.children)
             :new ArrayNode(
+                0,
                 self.count - 1,
                 arrayUpdate(frag, empty, self.children))
     // Modify
     :new ArrayNode(
+        0,
         self.count,
         arrayUpdate(frag, newChild, self.children));
 
@@ -599,6 +637,12 @@ in
  * ArrayNode::mutate
  */
 ArrayNode.prototype.mutate = \edit shift f h k =self-> {
+    if (edit != self.edit) {
+        var m = self.modify(shift, f, h, k);
+        m.edit = edit;
+        return m;
+    }
+    
     var frag := hashFragment(shift, h),
         child = self.children.(frag),
         newChild = alter(true, edit, child, shift + SIZE, f, h, k);
