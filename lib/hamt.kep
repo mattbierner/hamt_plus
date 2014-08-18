@@ -7,7 +7,12 @@ package(
     hash
     
     make
-
+    
+// Mutation
+    beginMutation
+    endMutation
+    mutate
+    
 // Queries
     tryGetHash
     tryGet
@@ -310,7 +315,7 @@ var setCollisionList = \list f k -> {
     }
 };
 
-/*
+/* Definition
  ******************************************************************************/
 var Tree := function\mutable config root =self-> {
     self.mutable = mutable;
@@ -324,6 +329,12 @@ Tree.setRoot := \tree root ->
         tree.config,
         root);
 
+Tree.setMutable := \mutable tree ->
+    new Tree(
+        mutable,
+        tree.config,
+        tree.root);
+
 /**
  * 
  */
@@ -335,6 +346,30 @@ in
             false, {
                 keyCompare: config && (config.keyCompare || defKeyCompare)},
             empty);
+
+/* Mutation
+ ******************************************************************************/
+/**
+ * Low level mutation operations that make a tree as mutable or immutable.
+ * 
+ * Mutation is a binary setting, no matter how many times `beginMuation` is called,
+ * a single call to `endMutation` makes the tree immutable again.
+ * 
+ * Usually, you should use mutate instead.
+ * 
+ * @param ht HAMT
+ */
+beginMutation :=  Tree.setMutable @ true;
+endMutation :=  Tree.setMutable @ false;
+
+/**
+ * 
+ */
+mutate := \f m -> {
+    var t = beginMutation(m);
+    f(t);
+    return endMutation(t);
+};
 
 /* Lookups
  ******************************************************************************/
@@ -413,16 +448,13 @@ Leaf.prototype.mutate := \shift f h k =self-> {
         var v := f(self.value);
         if (isNothing v)
             return empty;
-        else
-            self.value = v;
-    } else {
-        var v := f();
-        if (isNothing v)
-            return self;
-        else
-            return mergeLeaves(shift, self, new Leaf(h, k, v));
+        self.value = v;
+        return self;
     }
-    return self;
+    return let v := f() in
+        ?isNothing v
+            :self
+            :mergeLeaves(shift, self, new Leaf(h, k, v));
 };
 
 /**
@@ -713,6 +745,7 @@ removeHash := let del = constant nothing in
 remove := \k m ->
     removeHash(hash k, k, m);
 
+
 /* Fold
  ******************************************************************************/
 /**
@@ -807,4 +840,5 @@ keys = let build = \p {key} -> { p.push key; return p; } in
 values = let build = \p {value} -> { p.push value; return p; } in
     \m ->
         fold(build, [], m);
+
 }

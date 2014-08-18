@@ -3,8 +3,8 @@
  * DO NOT EDIT
 */
 "use strict";
-var hash, make, tryGetHash, tryGet, getHash, get, hasHash, has, setHash, set, modifyHash, modify, removeHash, remove,
-        fold, count, pairs, keys, values, __seq = (function(x, y) {
+var hash, make, beginMutation, endMutation, mutate, tryGetHash, tryGet, getHash, get, hasHash, has, setHash, set,
+        modifyHash, modify, removeHash, remove, fold, count, pairs, keys, values, __seq = (function(x, y) {
             return (x === y);
         }),
     BUCKET_SIZE = Math.pow(2, 5),
@@ -139,10 +139,20 @@ var Leaf = (function(hash0, key, value) {
 (Tree.setRoot = (function(tree, root) {
     return new(Tree)(tree.mutable, tree.config, root);
 }));
+(Tree.setMutable = (function(mutable, tree) {
+    return new(Tree)(mutable, tree.config, tree.root);
+}));
 (make = (function(config) {
     return new(Tree)(false, ({
         keyCompare: (config && (config.keyCompare || __seq))
     }), null);
+}));
+(beginMutation = Tree.setMutable.bind(null, true));
+(endMutation = Tree.setMutable.bind(null, false));
+(mutate = (function(f, m) {
+    var t = beginMutation(m);
+    f(t);
+    return endMutation(t);
 }));
 var lookup;
 (Leaf.prototype.lookup = (function(_, _0, k) {
@@ -191,15 +201,11 @@ var alter;
     if ((k === self.key)) {
         var v = f(self.value);
         if ((nothing === v)) return null;
-        else {
-            (self.value = v);
-        }
-    } else {
-        var v0 = f();
-        if ((nothing === v0)) return self;
-        else return mergeLeaves(shift, self, new(Leaf)(h, k, v0));
+        (self.value = v);
+        return self;
     }
-    return self;
+    var v0 = f();
+    return ((nothing === v0) ? self : mergeLeaves(shift, self, new(Leaf)(h, k, v0)));
 }));
 (Collision.prototype.modify = (function(shift, f, h, k) {
     var self = this,
@@ -288,9 +294,9 @@ var alter;
     }
     return self;
 }));
-(alter = (function(mutate, n, shift, f, h, k) {
+(alter = (function(mutate0, n, shift, f, h, k) {
     var v;
-    return ((!n) ? ((v = f()), ((nothing === v) ? null : new(Leaf)(h, k, v))) : (mutate ? n.mutate(shift, f, h,
+    return ((!n) ? ((v = f()), ((nothing === v) ? null : new(Leaf)(h, k, v))) : (mutate0 ? n.mutate(shift, f, h,
         k) : n.modify(shift, f, h, k)));
 }));
 (tryGetHash = (function(alt, h, k, m) {
@@ -325,40 +331,40 @@ var alter;
     return (!((n = m.root), (y = ((!n) ? nothing : n.lookup(0, h, k))), (nothing === y)));
 }));
 (modifyHash = (function(h, k, f, m) {
-    var mutate, n, v;
-    return Tree.setRoot(m, ((mutate = m.mutable), (n = m.root), ((!n) ? ((v = f()), ((nothing === v) ? null :
-        new(Leaf)(h, k, v))) : (mutate ? n.mutate(0, f, h, k) : n.modify(0, f, h, k)))));
+    var mutate0, n, v;
+    return Tree.setRoot(m, ((mutate0 = m.mutable), (n = m.root), ((!n) ? ((v = f()), ((nothing === v) ? null :
+        new(Leaf)(h, k, v))) : (mutate0 ? n.mutate(0, f, h, k) : n.modify(0, f, h, k)))));
 }));
 (modify = (function(k, f, m) {
     var h = hash(k),
-        mutate, n, v;
-    return Tree.setRoot(m, ((mutate = m.mutable), (n = m.root), ((!n) ? ((v = f()), ((nothing === v) ? null :
-        new(Leaf)(h, k, v))) : (mutate ? n.mutate(0, f, h, k) : n.modify(0, f, h, k)))));
+        mutate0, n, v;
+    return Tree.setRoot(m, ((mutate0 = m.mutable), (n = m.root), ((!n) ? ((v = f()), ((nothing === v) ? null :
+        new(Leaf)(h, k, v))) : (mutate0 ? n.mutate(0, f, h, k) : n.modify(0, f, h, k)))));
 }));
 (setHash = (function(h, k, v, m) {
     var f = (function() {
         return v;
     }),
-        mutate, n;
-    return Tree.setRoot(m, ((mutate = m.mutable), (n = m.root), ((!n) ? ((nothing === v) ? null : new(Leaf)(h,
-        k, v)) : (mutate ? n.mutate(0, f, h, k) : n.modify(0, f, h, k)))));
+        mutate0, n;
+    return Tree.setRoot(m, ((mutate0 = m.mutable), (n = m.root), ((!n) ? ((nothing === v) ? null : new(Leaf)(h,
+        k, v)) : (mutate0 ? n.mutate(0, f, h, k) : n.modify(0, f, h, k)))));
 }));
 (set = (function(k, v, m) {
     var h = hash(k),
         f = (function() {
             return v;
         }),
-        mutate, n;
-    return Tree.setRoot(m, ((mutate = m.mutable), (n = m.root), ((!n) ? ((nothing === v) ? null : new(Leaf)(h,
-        k, v)) : (mutate ? n.mutate(0, f, h, k) : n.modify(0, f, h, k)))));
+        mutate0, n;
+    return Tree.setRoot(m, ((mutate0 = m.mutable), (n = m.root), ((!n) ? ((nothing === v) ? null : new(Leaf)(h,
+        k, v)) : (mutate0 ? n.mutate(0, f, h, k) : n.modify(0, f, h, k)))));
 }));
 var del = (function() {
     return nothing;
 });
 (removeHash = (function(h, k, m) {
-    var mutate, n;
-    return Tree.setRoot(m, ((mutate = m.mutable), (n = m.root), ((!n) ? ((nothing === nothing) ? null : new(
-        Leaf)(h, k, nothing)) : (mutate ? n.mutate(0, del, h, k) : n.modify(0, del, h, k)))));
+    var mutate0, n;
+    return Tree.setRoot(m, ((mutate0 = m.mutable), (n = m.root), ((!n) ? ((nothing === nothing) ? null : new(
+        Leaf)(h, k, nothing)) : (mutate0 ? n.mutate(0, del, h, k) : n.modify(0, del, h, k)))));
 }));
 (remove = (function(k, m) {
     return removeHash(hash(k), k, m);
@@ -442,6 +448,9 @@ var build1 = (function(p, __o) {
 }));
 (exports["hash"] = hash);
 (exports["make"] = make);
+(exports["beginMutation"] = beginMutation);
+(exports["endMutation"] = endMutation);
+(exports["mutate"] = mutate);
 (exports["tryGetHash"] = tryGetHash);
 (exports["tryGet"] = tryGet);
 (exports["getHash"] = getHash);
