@@ -49,7 +49,7 @@ var MIN_ARRAY_NODE := BUCKET_SIZE / 4;
  ******************************************************************************/
 var nothing := ({});
 
-var isNothing := (===, nothing);
+var isNothing := (=== nothing);
 
 var maybe := \val def ->
     ?isNothing val
@@ -334,7 +334,9 @@ Tree.setRoot := \root tree -> {
 };
 
 /**
+ * Create a new HAMT.
  * 
+ * @param config#{hash, keyEq} Optional configuration of how the HAMT operates.
  */
 make := let
     defKeyCompare = (===)
@@ -342,10 +344,10 @@ in
     \config ->
         new Tree(
             false,
-            0,
-            {
-                keyCompare: (config && config.keyCompare) || defKeyCompare,
-                hash: (config && config.hash) || hash},
+            0, {
+                keyEq: (config && config.keyCompare) || defKeyCompare,
+                hash: (config && config.hash) || hash
+            },
             empty);
 
 /* Mutation
@@ -384,6 +386,13 @@ endMutation := \tree ->
 
 /**
  * Perform operations in `f` on a mutable version of `m`.
+ * 
+ * `f` is a function that is passed a reference to the mutable copy of `m`.
+ * Once `f` returns, the mutable copy of `m` is locked again.
+ * 
+ * @param f Function taking mutable HAMT that performs operations on it.
+ * @param m HAMT.
+ * 
  */
 mutate := \f m -> {
     var t = beginMutation(m);
@@ -398,19 +407,19 @@ var lookup;
 /**
  * Leaf::get
  */
-Leaf.prototype.lookup = \_ _ k =self->
-    ?k === self.key
+Leaf.prototype.lookup = \eq _ _ k =self->
+    ?eq(self.key, k)
         :self.value
         :nothing;
 
 /**
  * Collision::get
  */
-Collision.prototype.lookup = \_ h k =self-> {
+Collision.prototype.lookup = \eq _ h k =self-> {
     if (h === self.hash) {
         for (var i = 0, len = self.children.length; i < len; i = i + 1)
         with {key value} = self.children.(i) in {
-            if (k === key)
+            if (eq(key, k))
                 return value;
         }
     }
@@ -420,27 +429,27 @@ Collision.prototype.lookup = \_ h k =self-> {
 /**
  * IndexedNode::get
  */
-IndexedNode.prototype.lookup = \shift h k =self-> let
+IndexedNode.prototype.lookup = \eq shift h k =self-> let
     frag = hashFragment(shift, h),
     bit = toBitmap frag
 in
     ?self.mask & bit
-        :lookup(self.children.(fromBitmap(self.mask, bit)), shift + SIZE, h, k)
+        :lookup(eq, self.children.(fromBitmap(self.mask, bit)), shift + SIZE, h, k)
         :nothing;
 
 /**
  * ArrayNode::get
  */
-ArrayNode.prototype.lookup = \shift h k =self-> let
+ArrayNode.prototype.lookup = \eq shift h k =self-> let
     frag = hashFragment(shift, h),
     child = self.children.(frag)
 in
-    lookup(child, shift + SIZE, h, k);
+    lookup(eq, child, shift + SIZE, h, k);
 
-lookup := \n shift h k ->
+lookup := \eq n shift h k ->
     ?isEmpty n
         :nothing
-        :n.lookup(shift, h, k);
+        :n.lookup(eq, shift, h, k);
 
 /* Editing
  ******************************************************************************/
@@ -676,34 +685,40 @@ alter := \mutable edit n shift f h k ->
 /* Queries
  ******************************************************************************/
 /**
- * Lookup a value using the internal `hash`.
+ * Try looking up the value stored for `k`.
  * 
- * @param alt Fallback value.
- * @param k Key
- * @param m Hashtrie
+ * @param alt Fallback value returned if no such key exists.
+ * @param k Key.
+ * @param m HAMT.
  */
 tryGet := \alt k m ->
     maybe(
-        lookup(m.root, 0, m.config.hash k, k),
+        lookup(
+            m.config.keyEq,
+            m.root,
+            0,
+            m.config.hash k,
+            k),
         alt);
 
 /**
- * Lookup a value using the internal `hash`.
+ * Lookup the value stored for `k`.
+ * 
+ * Return null if none.
  * 
  * @param k Key.
- * @param m Hashtrie
+ * @param m HAMT.
  */
-get := \k m ->
-     maybe(lookup(m.root, 0, m.config.hash k, k), null);
+get := tryGet @ null;
 
 /**
- * Check if a an entry exists using internal `hash`
+ * Does an entry for `k` exist?
  * 
  * @param k Key.
- * @param m Hashtrie
+ * @param m HAMT.
  */
 has := \k m ->
-    !isNothing lookup(m.root, 0, m.config.hash k, k);
+    !isNothing tryGet(nothing, k, m);
 
 /* Single Updates
  ******************************************************************************/

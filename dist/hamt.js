@@ -150,7 +150,7 @@
     }));
     (make = (function(config) {
         return new(Tree)(false, 0, ({
-            keyCompare: ((config && config.keyCompare) || __seq),
+            keyEq: ((config && config.keyCompare) || __seq),
             hash: ((config && config.hash) || hash)
         }), null);
     }));
@@ -167,11 +167,11 @@
         return new(Tree)(false, tree.edit, tree.config, tree.root);
     }));
     var lookup;
-    (Leaf.prototype.lookup = (function(_, _0, k) {
+    (Leaf.prototype.lookup = (function(eq, _, _0, k) {
         var self = this;
-        return ((k === self.key) ? self.value : nothing);
+        return (eq(self.key, k) ? self.value : nothing);
     }));
-    (Collision.prototype.lookup = (function(_, h, k) {
+    (Collision.prototype.lookup = (function(eq, _, h, k) {
         var self = this;
         if ((h === self.hash)) {
             for (var i = 0, len = self.children.length;
@@ -180,27 +180,27 @@
                 var __o = self.children[i],
                     key = __o["key"],
                     value = __o["value"];
-                if ((k === key)) return value;
+                if (eq(key, k)) return value;
             }
         }
         return nothing;
     }));
-    (IndexedNode.prototype.lookup = (function(shift, h, k) {
+    (IndexedNode.prototype.lookup = (function(eq, shift, h, k) {
         var self = this,
             frag = ((h >>> shift) & mask),
             bit = (1 << frag),
             bitmap;
-        return ((self.mask & bit) ? lookup(self.children[((bitmap = self.mask), popcount((bitmap & (bit -
-            1))))], (shift + 5), h, k) : nothing);
+        return ((self.mask & bit) ? lookup(eq, self.children[((bitmap = self.mask), popcount((bitmap &
+            (bit - 1))))], (shift + 5), h, k) : nothing);
     }));
-    (ArrayNode.prototype.lookup = (function(shift, h, k) {
+    (ArrayNode.prototype.lookup = (function(eq, shift, h, k) {
         var self = this,
             frag = ((h >>> shift) & mask),
             child = self.children[frag];
-        return lookup(child, (shift + 5), h, k);
+        return lookup(eq, child, (shift + 5), h, k);
     }));
-    (lookup = (function(n, shift, h, k) {
-        return ((!n) ? nothing : n.lookup(shift, h, k));
+    (lookup = (function(eq, n, shift, h, k) {
+        return ((!n) ? nothing : n.lookup(eq, shift, h, k));
     }));
     var alter;
     (Leaf.prototype.modify = (function(shift, f, h, k) {
@@ -334,21 +334,23 @@
             edit, shift, f, h, k) : n.modify(shift, f, h, k)));
     }));
     (tryGet = (function(alt, k, m) {
-        var n = m.root,
+        var eq = m.config.keyEq,
+            n = m.root,
             h = m.config.hash(k),
-            val = ((!n) ? nothing : n.lookup(0, h, k));
+            val = ((!n) ? nothing : n.lookup(eq, 0, h, k));
         return ((nothing === val) ? alt : val);
     }));
     (get = (function(k, m) {
-        var n = m.root,
+        var eq = m.config.keyEq,
+            n = m.root,
             h = m.config.hash(k),
-            val = ((!n) ? nothing : n.lookup(0, h, k));
+            val = ((!n) ? nothing : n.lookup(eq, 0, h, k));
         return ((nothing === val) ? null : val);
     }));
     (has = (function(k, m) {
-        var n, h, y;
-        return (!((n = m.root), (h = m.config.hash(k)), (y = ((!n) ? nothing : n.lookup(0, h, k))), (
-            nothing === y)));
+        var eq, n, h, val, y;
+        return (!((eq = m.config.keyEq), (n = m.root), (h = m.config.hash(k)), (val = ((!n) ? nothing :
+            n.lookup(eq, 0, h, k))), (y = ((nothing === val) ? nothing : val)), (nothing === y)));
     }));
     (modify = (function(k, f, m) {
         var edit, n, h, v;
