@@ -56,6 +56,31 @@ exports.does_not_effect_post_value = function(test) {
     test.done();
 };
 
+
+exports.mutations_do_not_effect_one_another = function(test) {
+    var h = hamt.set('a', 100, hamt.make());
+    
+    var h1 = hamt.mutate(function(m) {
+        hamt.set('a', 3, m);
+        hamt.set('b', 5, m);
+    }, h);
+    
+    var h2 = hamt.mutate(function(m) {
+        hamt.set('a', 30, m);
+        hamt.set('b', 50, m);
+    }, h1);
+    
+    test.equal(hamt.get('a', h), 100);
+    test.equal(hamt.get('a', h1), 3);
+    test.equal(hamt.get('a', h2), 30);
+
+    test.equal(hamt.get('b', h), null);
+    test.equal(hamt.get('b', h1), 5);
+    test.equal(hamt.get('b', h2), 50);
+
+    test.done();
+};
+
 exports.many = function(test) {
     var insert = ["n", "U", "p", "^", "h", "w", "W", "x", "S", "f", "H", "m", "g",
                "l", "b", "_", "V", "Z", "G", "o", "F", "Q", "a", "k", "j", "r",

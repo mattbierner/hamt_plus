@@ -358,14 +358,20 @@ in
             empty);
 
 /* Mutation
+ * 
+ * Mutation in HAMT uses transaction style interface. Between calls to `beginMutation`
+ * and `endMuation` the tree structure and internal nodes may be modified freely.
+ * However, these modifications will not effect any immutable copies captured
+ * before the call to `beginMutation` or any operations after `endMuation`.
+ * 
+ * Mutation block allow mutation only for operations performed in that block. You
+ * should generally not store the tree while it is in a mutable state.
+ * 
+ * 
+ * 
  ******************************************************************************/
 /**
- * Low level mutation operations that make a tree as mutable or immutable.
- * 
- * Mutation is a binary setting, no matter how many times `beginMuation` is called,
- * a single call to `endMutation` makes the tree immutable again.
- * 
- * Usually, you should use mutate instead.
+ * Low level operation that marks a HAMT as mutable.
  * 
  * @param ht HAMT
  */
@@ -376,6 +382,11 @@ beginMutation := \tree ->
         tree.config,
         tree.root);
 
+/**
+ * Low level operation that marks a HAMT as immutable.
+ * 
+ * @param ht HAMT
+ */
 endMutation := \tree ->
      new Tree(
         false,
