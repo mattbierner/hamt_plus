@@ -273,16 +273,16 @@
             if (((children.length <= 2) && isLeaf(children[(indx ^ 1)]))) {
                 return children[(indx ^ 1)];
             }
-            (self.bitmap = bitmap0);
+            (self.mask = bitmap0);
             self.children.splice(indx, 1);
         } else if (added) {
             if ((self.children.length >= MAX_INDEX_NODE)) {
                 return expand(edit, frag, child, self.mask, children);
             }
-            (self.bitmap = bitmap0);
+            (self.mask = bitmap0);
             self.children.splice(indx, 0, child);
         } else {
-            (self.bitmap = bitmap0);
+            (self.mask = bitmap0);
             (self.children[indx] = child);
         }
         return self;

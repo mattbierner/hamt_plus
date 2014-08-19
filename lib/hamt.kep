@@ -594,17 +594,17 @@ IndexedNode.prototype.mutate = \eq edit shift f h k =self#{children}-> {
             // collapse
             return children.(indx ^ 1);
         }
-        self.bitmap = bitmap;
+        self.mask = bitmap;
         self.children.splice(indx, 1);
     } else if (added) {
         if (self.children.length >= MAX_INDEX_NODE) {
             return expand(edit, frag, child, self.mask, children);
         }
-        self.bitmap = bitmap;
+        self.mask = bitmap;
         self.children.splice(indx, 0, child);
     } else {
         // modify;
-        self.bitmap = bitmap;
+        self.mask = bitmap;
         self.children.(indx) = child;
     }
     return self;
