@@ -22,11 +22,11 @@ which instead can use a user defined hash operation.
 ### Node
 Node source is in `dist_node/hamt.js`
 
-``` prettyprint lang-javascript
+``` javascript
 $ npm install hamt_plus
 ```
 
-``` prettyprint lang-javascript
+``` javascript
 var hamt = require('hamt_plus');
 
 var h = hamt.make();
@@ -40,7 +40,7 @@ h = hamt.set('key', 'value', h);
 ### Amd
 Amd source is in `dist/hamt.js`
 
-``` prettyprint lang-javascript
+``` javascript
 requirejs.config({
     paths: {
         'hamt': 'dist/hamt'
@@ -57,7 +57,7 @@ function(hamt) {
 
 ## Usage
 
-``` prettyprint lang-javascript
+``` javascript
 var hamt = require('hamt_plus');
 
 // Empty map
