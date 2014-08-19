@@ -228,11 +228,7 @@ var alter;
 }));
 (Collision.prototype.mutate = (function(eq, edit, shift, f, h, k) {
     var self = this;
-    if ((edit != self.edit)) {
-        var m = self.modify(eq, edit, shift, f, h, k);
-        (m.edit = edit);
-        return m;
-    }
+    if ((edit != self.edit)) return self.modify(eq, edit, shift, f, h, k);
     setCollisionList(eq, self.children, f, k);
     if ((self.children.length <= 1)) return self.children[0];
     return self;
@@ -259,11 +255,7 @@ var alter;
     var self = this,
         children = self["children"],
         bitmap;
-    if ((edit != self.edit)) {
-        var m = self.modify(eq, edit, shift, f, h, k);
-        (m.edit = edit);
-        return m;
-    }
+    if ((edit != self.edit)) return self.modify(eq, edit, shift, f, h, k);
     var frag = ((h >>> shift) & mask),
         bit = (1 << frag),
         indx = ((bitmap = self.mask), popcount((bitmap & (bit - 1)))),
@@ -305,11 +297,7 @@ var alter;
 (ArrayNode.prototype.mutate = (function(eq, edit, shift, f, h, k) {
     var self = this,
         x, x0, x1, x2;
-    if ((edit != self.edit)) {
-        var m = self.modify(eq, edit, shift, f, h, k);
-        (m.edit = edit);
-        return m;
-    }
+    if ((edit != self.edit)) return self.modify(eq, edit, shift, f, h, k);
     var frag = ((h >>> shift) & mask),
         child = self.children[frag],
         newChild = alter(true, eq, edit, child, (shift + 5), f, h, k);

@@ -510,12 +510,9 @@ in
  * Collision::mutate
  */
 Collision.prototype.mutate = \eq edit shift f h k =self-> {
-    if (edit != self.edit) {
-        var m = self.modify(eq, edit, shift, f, h, k);
-        m.edit = edit;
-        return m;
-    }
-    
+    if (edit != self.edit)
+        return self.modify(eq, edit, shift, f, h, k);
+
     setCollisionList(eq, self.children, f, k);
     if (self.children.length <= 1)
         return self.children.(0);
@@ -571,11 +568,8 @@ in
  * IndexedNode::mutate
  */
 IndexedNode.prototype.mutate = \eq edit shift f h k =self#{children}-> {
-    if (edit != self.edit) {
-        var m = self.modify(eq, edit, shift, f, h, k);
-        m.edit = edit;
-        return m;
-    }
+    if (edit != self.edit)
+        return self.modify(eq, edit, shift, f, h, k);
     
     var frag := hashFragment(shift, h),
         bit := toBitmap frag,
@@ -649,11 +643,8 @@ in
  * ArrayNode::mutate
  */
 ArrayNode.prototype.mutate = \eq edit shift f h k =self-> {
-    if (edit != self.edit) {
-        var m = self.modify(eq, edit, shift, f, h, k);
-        m.edit = edit;
-        return m;
-    }
+    if (edit != self.edit)
+        return self.modify(eq, edit, shift, f, h, k);
     
     var frag := hashFragment(shift, h),
         child = self.children.(frag),
