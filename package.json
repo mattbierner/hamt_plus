@@ -1,6 +1,6 @@
 {
     "name": "hamt_plus",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "description": "Fork of HAMT that adds a transaction interface and support for custom key types",
     "keywords": [
         "trie",
