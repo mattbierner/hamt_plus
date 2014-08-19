@@ -124,7 +124,7 @@ var h = hamt.mutate(function(h) {
     // but mutation may not leak out of this block.
     keys.forEach(function(key, i) {
         hamt.set(key, i, h);
-    })
+    });
 }, hamt.make());
 ```
 

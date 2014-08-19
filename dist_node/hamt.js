@@ -119,10 +119,10 @@ var Leaf = (function(edit, hash0, key, value) {
     setCollisionList = (function(eq, list, f, k) {
         for (var i = 0, len = list.length;
             (i < len);
-            (+i)) {
-            var first = list[i];
-            if (eq(first.key, k)) {
-                var v = f(first.value);
+            (i = (i + 1))) {
+            var child = list[i];
+            if (eq(child.key, k)) {
+                var v = f(child.value);
                 if ((nothing === v)) {
                     list.splice(i, 1);
                 } else {
@@ -131,6 +131,13 @@ var Leaf = (function(edit, hash0, key, value) {
                 return list;
             }
         }
+        var v0 = f();
+        if ((nothing === v0)) return list;
+        list.push(v0);
+        return list;
+    }),
+    modifyCollisionList = (function(mutate, eq, list, f, k) {
+        return (mutate ? updateCollisionList(eq, list, f, k) : setCollisionList(eq, list, f, k));
     }),
     Tree = (function(mutable, edit, config, root) {
         var self = this;
@@ -175,10 +182,8 @@ var lookup;
         for (var i = 0, len = self.children.length;
             (i < len);
             (i = (i + 1))) {
-            var __o = self.children[i],
-                key = __o["key"],
-                value = __o["value"];
-            if (eq(key, k)) return value;
+            var child = self.children[i];
+            if (eq(child.key, k)) return child.value;
         }
     }
     return nothing;
@@ -201,17 +206,12 @@ var lookup;
     return ((!n) ? nothing : n.lookup(eq, shift, h, k));
 }));
 var alter;
-(Leaf.prototype.modify = (function(eq, edit, shift, f, h, k) {
-    var v, v0, self = this;
-    return (eq(self.key, k) ? ((v = f(self.value)), ((nothing === v) ? null : new(Leaf)(edit, h, k, v))) : ((v0 =
-        f()), ((nothing === v0) ? self : mergeLeaves(edit, shift, self, new(Leaf)(edit, h, k, v0)))));
-}));
 (Leaf.prototype.mutate = (function(eq, edit, shift, f, h, k) {
     var self = this;
     if (eq(self.key, k)) {
         var v = f(self.value);
         if ((nothing === v)) return null;
-        if ((edit === self.edit)) {
+        if ((edit && (edit === self.edit))) {
             (self.value = v);
             return self;
         } else {
@@ -221,18 +221,14 @@ var alter;
     var v0 = f();
     return ((nothing === v0) ? self : mergeLeaves(edit, shift, self, new(Leaf)(edit, h, k, v0)));
 }));
-(Collision.prototype.modify = (function(eq, edit, shift, f, h, k) {
-    var self = this,
-        list = updateCollisionList(eq, self.children, f, k);
-    return ((list.length > 1) ? new(Collision)(edit, self.hash, list) : list[0]);
-}));
+(Leaf.prototype.modify = Leaf.prototype.mutate);
 (Collision.prototype.mutate = (function(eq, edit, shift, f, h, k) {
-    var self = this;
-    if ((edit != self.edit)) return self.modify(eq, edit, shift, f, h, k);
-    setCollisionList(eq, self.children, f, k);
-    if ((self.children.length <= 1)) return self.children[0];
-    return self;
+    var self = this,
+        list = modifyCollisionList((edit && (edit === self.edit)), eq, self.children, f, k);
+    if ((list.length <= 1)) return list[0];
+    return ((edit && (edit === self.edit)) ? self : new(Collision)(edit, h, list));
 }));
+(Collision.prototype.modify = Collision.prototype.mutate);
 (IndexedNode.prototype.modify = (function(eq, edit, shift, f, h, k) {
     var self = this,
         children = self["children"],
@@ -316,7 +312,7 @@ var alter;
 (alter = (function(mutate0, eq, edit, n, shift, f, h, k) {
     var v;
     return ((!n) ? ((v = f()), ((nothing === v) ? null : new(Leaf)(edit, h, k, v))) : (mutate0 ? n.mutate(eq,
-        edit, shift, f, h, k) : n.modify(eq, edit, shift, f, h, k)));
+        edit, shift, f, h, k) : n.modify(eq, 0, shift, f, h, k)));
 }));
 (tryGet = (function(alt, k, m) {
     var eq = m.config.keyEq,
@@ -341,7 +337,7 @@ var alter;
     var mutate0, eq, edit, n, h, v;
     return Tree.setRoot(((mutate0 = m.mutable), (eq = m.config.keyEq), (edit = m.edit), (n = m.root), (h = m.config
         .hash(k)), ((!n) ? ((v = f()), ((nothing === v) ? null : new(Leaf)(edit, h, k, v))) : (mutate0 ?
-        n.mutate(eq, edit, 0, f, h, k) : n.modify(eq, edit, 0, f, h, k)))), m);
+        n.mutate(eq, edit, 0, f, h, k) : n.modify(eq, 0, 0, f, h, k)))), m);
 }));
 (set = (function(k, v, m) {
     var f = (function() {
@@ -350,7 +346,7 @@ var alter;
         mutate0, eq, edit, n, h;
     return Tree.setRoot(((mutate0 = m.mutable), (eq = m.config.keyEq), (edit = m.edit), (n = m.root), (h = m.config
         .hash(k)), ((!n) ? ((nothing === v) ? null : new(Leaf)(edit, h, k, v)) : (mutate0 ? n.mutate(eq,
-        edit, 0, f, h, k) : n.modify(eq, edit, 0, f, h, k)))), m);
+        edit, 0, f, h, k) : n.modify(eq, 0, 0, f, h, k)))), m);
 }));
 var del = (function() {
     return nothing;
@@ -359,7 +355,7 @@ var del = (function() {
     var mutate0, eq, edit, n, h;
     return Tree.setRoot(((mutate0 = m.mutable), (eq = m.config.keyEq), (edit = m.edit), (n = m.root), (h = m.config
         .hash(k)), ((!n) ? ((nothing === nothing) ? null : new(Leaf)(edit, h, k, nothing)) : (mutate0 ?
-        n.mutate(eq, edit, 0, del, h, k) : n.modify(eq, edit, 0, del, h, k)))), m);
+        n.mutate(eq, edit, 0, del, h, k) : n.modify(eq, 0, 0, del, h, k)))), m);
 }));
 (Leaf.prototype.fold = (function(f, z) {
     var self = this;
