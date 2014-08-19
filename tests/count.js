@@ -7,7 +7,6 @@ exports.empty = function(test) {
 };
 
 exports.simple_count = function(test) {
-    console.log( hamt.make());
     var h1 = hamt.set('b', 5, hamt.set('a', 3, hamt.make()));
     
     test.equal(hamt.count(h1), 2);
