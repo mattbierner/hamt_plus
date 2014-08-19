@@ -22,12 +22,12 @@ which instead can use a user defined hash operation.
 ### Node
 Node source is in `dist_node/hamt.js`
 
-```
-$ npm install hamt
+``` prettyprint lang-javascript
+$ npm install hamt_plus
 ```
 
-```
-var hamt = require('hamt');
+``` prettyprint lang-javascript
+var hamt = require('hamt_plus');
 
 var h = hamt.make();
 
@@ -40,7 +40,7 @@ h = hamt.set('key', 'value', h);
 ### Amd
 Amd source is in `dist/hamt.js`
 
-```
+``` prettyprint lang-javascript
 requirejs.config({
     paths: {
         'hamt': 'dist/hamt'
@@ -57,16 +57,16 @@ function(hamt) {
 
 ## Usage
 
-```
+``` prettyprint lang-javascript
 var hamt = require('hamt_plus');
 
-// empty table
+// Empty map
 var h = hamt.make();
 
 // Set 'key' to 'value'
 h = hamt.set('key', 'value', h);
 
-// get 'key'
+// Get 'key'
 hamt.get('key', h); // 'value'
 
 
@@ -79,18 +79,16 @@ hamt.get('b', h1); // null
 hamt.get('a', h2); // 'x'
 hamt.get('b', h2); // 'y'
 
-
-// modify an entry
+// Modify an entry
 h2 = hamt.modify('b', function(x) { return x + 'z'; }, h2);
 hamt.get('b', h2); // 'yz'
 
-// remove an entry
+// Remove an entry
 h2 = hamt.remove('b', h2);
 hamt.get('a', h2); // 'x'
 hamt.get('b', h2); // null
 
-
-// Aggregate Info
+/* Aggregation ---------------------------------------------------------------*/
 var h = hamt.set('b', 'y', hamt.set('a', 'x', hamt.make()));
 
 hamt.count(h); // 2
@@ -102,15 +100,37 @@ hamt.pairs(h); // [['b', 'y'], ['a', 'x']];
 var h = hamt.set('a', 10, hamt.set('b', 4, hamt.set('c', -2, hamt.make())));
 
 hamt.fold(\p {value} -> p + value, h); // 12
+
+/* Customization -------------------------------------------------------------*/
+// Use a custom hash function or key compare function
+var h = hamt.make({
+    hash: function(key) {
+        return hamt.hash(key.x + " " + key.y);
+    },
+    keyEq: function(key1, key2) {
+        return key1.x === key2.x && key1.y === key2.y;
+    }});
+
+h = hamt.set(new Vec2(1, 2), 'abc', h);
+h = hamt.set(new Vec2(3, 4), 'efg', h);
+
+hamt.get(new Vec2(3, 4), h); // 'efg'
+hamt.get(new Vec2(1, 2), h); // 'abc'
+
+/* Mutation ------------------------------------------------------------------*/
+var keys = [...];
+var h = hamt.mutate(function(h) {
+    // Operations inside this block may mutate `h` to improve performance
+    // but mutation may not leak out of this block.
+    keys.forEach(function(key, i) {
+        hamt.set(key, i, h);
+    })
+}, hamt.make());
 ```
 
 
 [hamt]: https://github.com/mattbierner/hamt
-[hashtrie]: https://github.com/mattbierner/hashtrie
 [benchmarks]: http://github.com/mattbierner/js-hashtrie-benchmark
 [pdata]: https://github.com/exclipy/pdata
 [hash-array-mapped-trie]: http://en.wikipedia.org/wiki/Hash_array_mapped_trie
 [persistent]: http://en.wikipedia.org/wiki/Persistent_data_structure
-
-[mori]: https://github.com/swannodette/mori
-[persistent-hash-trie]: https://github.com/hughfdjackson/persistent-hash-trie
