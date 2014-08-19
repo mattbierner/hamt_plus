@@ -102,15 +102,14 @@
             }
             return new(IndexedNode)(edit, bitmap, children);
         }),
-        mergeLeaves = (function(shift, n1, n2) {
+        mergeLeaves = (function(edit, shift, n1, n2) {
             var h1 = n1.hash,
                 h2 = n2.hash,
                 subH1, subH2;
-            return ((h1 === h2) ? new(Collision)(0, h1, [n2, n1]) : ((subH1 = ((h1 >>> shift) & mask)), (
-                subH2 = ((h2 >>> shift) & mask)), new(IndexedNode)(0, ((1 << subH1) | (1 << subH2)), (
-                (subH1 === subH2) ? [mergeLeaves((shift + 5), n1, n2)] : ((subH1 < subH2) ? [n1,
-                    n2
-                ] : [n2, n1])))));
+            return ((h1 === h2) ? new(Collision)(edit, h1, [n2, n1]) : ((subH1 = ((h1 >>> shift) & mask)), (
+                subH2 = ((h2 >>> shift) & mask)), new(IndexedNode)(edit, ((1 << subH1) | (1 <<
+                subH2)), ((subH1 === subH2) ? [mergeLeaves(edit, (shift + 5), n1, n2)] : ((
+                subH1 < subH2) ? [n1, n2] : [n2, n1])))));
         }),
         updateCollisionList = (function(eq, list, f, k) {
             var first, rest, v;
@@ -206,8 +205,8 @@
     (Leaf.prototype.modify = (function(eq, edit, shift, f, h, k) {
         var v, v0, self = this;
         return (eq(self.key, k) ? ((v = f(self.value)), ((nothing === v) ? null : new(Leaf)(edit, h, k,
-            v))) : ((v0 = f()), ((nothing === v0) ? self : mergeLeaves(shift, self, new(Leaf)(edit,
-            h, k, v0)))));
+            v))) : ((v0 = f()), ((nothing === v0) ? self : mergeLeaves(edit, shift, self, new(Leaf)
+            (edit, h, k, v0)))));
     }));
     (Leaf.prototype.mutate = (function(eq, edit, shift, f, h, k) {
         var self = this;
@@ -222,7 +221,7 @@
             }
         }
         var v0 = f();
-        return ((nothing === v0) ? self : mergeLeaves(shift, self, new(Leaf)(edit, h, k, v0)));
+        return ((nothing === v0) ? self : mergeLeaves(edit, shift, self, new(Leaf)(edit, h, k, v0)));
     }));
     (Collision.prototype.modify = (function(eq, edit, shift, f, h, k) {
         var self = this,

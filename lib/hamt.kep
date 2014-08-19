@@ -267,21 +267,21 @@ var pack = \edit removed elements -> {
  * @param n1 Node.
  * @param n2 Node.
  */
-var mergeLeaves = \shift n1 n2 -> let
+var mergeLeaves = \edit shift n1 n2 -> let
     h1 = n1.hash,
     h2 = n2.hash
 in
     ?h1 === h2
-        :new Collision(0, h1, [n2, n1])
+        :new Collision(edit, h1, [n2, n1])
         :let
             subH1 = hashFragment(shift, h1),
             subH2 = hashFragment(shift, h2)
         in
             new IndexedNode(
-                EDIT_NONE,
+                edit,
                 toBitmap subH1 | toBitmap subH2,
                 ?subH1 === subH2
-                    :[mergeLeaves(shift + SIZE, n1, n2)]
+                    :[mergeLeaves(edit, shift + SIZE, n1, n2)]
                     :?subH1 < subH2 : [n1, n2] : [n2, n1]);
 
 /**
@@ -471,7 +471,7 @@ Leaf.prototype.modify := \eq edit shift f h k =self->
     :let v = f() in
         ?isNothing v
             :self
-            :mergeLeaves(shift, self, new Leaf(edit, h, k, v));
+            :mergeLeaves(edit, shift, self, new Leaf(edit, h, k, v));
 
 /**
  * Leaf::mutate
@@ -493,7 +493,7 @@ Leaf.prototype.mutate := \eq edit shift f h k =self-> {
     return let v := f() in
         ?isNothing v
             :self
-            :mergeLeaves(shift, self, new Leaf(edit, h, k, v));
+            :mergeLeaves(edit, shift, self, new Leaf(edit, h, k, v));
 };
 
 /**

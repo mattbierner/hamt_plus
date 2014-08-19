@@ -82,16 +82,18 @@ exports.mutations_do_not_effect_one_another = function(test) {
 };
 
 exports.many = function(test) {
-    var insert = ["n", "U", "p", "^", "h", "w", "W", "x", "S", "f", "H", "m", "g",
-               "l", "b", "_", "V", "Z", "G", "o", "F", "Q", "a", "k", "j", "r",
-               "B", "A", "y", "\\", "R", "D", "i", "c", "]", "C", "[", "e", "s",
-               "t", "J", "E", "q", "v", "M", "T", "N", "L", "K", "Y", "d", "P",
-               "u", "I", "O", "`", "X"];
+    var insert = [
+        "The", "Time", "Traveller", "for", "so", "it", "will", "be",
+        "convenient", "to", "speak", "of", "him", "was", "expounding",
+        "a", "recondite", "matter", "to", "us", "His", "grey", "eyes",
+        "shone", "and", "twinkled", "and", "his", "usually", "pale",
+        "face", "was", "flushed", "and", "animated"];
     
-    var h = hamt.make();
-    insert.forEach(function(x) {
-        h = hamt.set(x, x, h);
-    });
+    var h = hamt.mutate(function(h) {
+        insert.forEach(function(x) {
+            hamt.set(x, x, h);
+        });
+    }, hamt.make());
     
     containsAll(test,
         hamt.values(h),
