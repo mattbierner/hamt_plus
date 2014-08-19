@@ -1,15 +1,21 @@
-# HAMT
-Javascript Hash Array Mapped Trie
+# HAMT+
+Fork of [HAMT][hamt] with transactions and custom key types.
 
 ### Overview
-The [hash array mapped trie][hash-array-mapped-trie] is a [persistent][persistent]
-map data structure with good lookup and update performance. This
-Javascript implementation is based on [exclipy's Haskell port][pdata].
+This library is a fork of the [HAMT][hamt] [hash array mapped trie][hash-array-mapped-trie] library
+that adds a few important features in exchange for slightly degraded performance:
 
-[Benchmarks show][benchmarks] against [hashtrie][hashtrie],
-[persistent-hash-trie][persistent-hash-trie], and [Mori's hashmap][mori] show
-that this is the overall fastest persistent hash trie implementation.
+* A transaction interface for mutating a map in a specific context. This allows
+  efficent mass operations, while retaining the safety of a persistent data
+  structure.
 
+* Custom key compare function.
+
+* Custom hash function.
+
+The APIs of HAMT and HAMT+ are nearly identical, the major difference being
+how empty maps are created and the lack of `getHash` type operations in HAMT+,
+which instead can use a user defined hash operation.
 
 ## Install
 
@@ -23,7 +29,7 @@ $ npm install hamt
 ```
 var hamt = require('hamt');
 
-var h = hamt.empty;
+var h = hamt.make();
 
 h = hamt.set('key', 'value', h);
 
@@ -52,10 +58,10 @@ function(hamt) {
 ## Usage
 
 ```
-var hamt = require('hamt');
+var hamt = require('hamt_plus');
 
 // empty table
-var h = hamt.empty;
+var h = hamt.make();
 
 // Set 'key' to 'value'
 h = hamt.set('key', 'value', h);
@@ -65,7 +71,7 @@ hamt.get('key', h); // 'value'
 
 
 // The data structure is persistent so the original is not modified.
-var h1 = hamt.set('a', 'x', hamt.empty);
+var h1 = hamt.set('a', 'x', hamt.make());
 var h2 = hamt.set('b', 'y', h1);
 
 hamt.get('a', h1); // 'x'
@@ -84,19 +90,8 @@ hamt.get('a', h2); // 'x'
 hamt.get('b', h2); // null
 
 
-// Custom hash Function
-// The main Hamt API expects all keys to be strings. Versions of all API functions
-// that take a `hash` parameter are also provided so custom hashes and keys can be used.
-
-// Collisions are correctly handled
-var h1 = hamt.setHash(0, 'a', 'x', hamt.empty);
-var h2 = hamt.setHash(0, 'b', 'y', h1);
-
-hamt.get('a', h2); // 'x'
-hamt.get('b', h2); // 'y'
-
 // Aggregate Info
-var h = hamt.set('b', 'y', hamt.set('a', 'x', hamt.empty));
+var h = hamt.set('b', 'y', hamt.set('a', 'x', hamt.make()));
 
 hamt.count(h); // 2
 hamt.keys(h); // ['b', 'a'];
@@ -104,12 +99,13 @@ hamt.values(h); // ['y', 'x'];
 hamt.pairs(h); // [['b', 'y'], ['a', 'x']];
 
 // Fold
-var h = hamt.set('a', 10, hamt.set('b', 4, hamt.set('c', -2, hamt.empty)));
+var h = hamt.set('a', 10, hamt.set('b', 4, hamt.set('c', -2, hamt.make())));
 
 hamt.fold(\p {value} -> p + value, h); // 12
 ```
 
 
+[hamt]: https://github.com/mattbierner/hamt
 [hashtrie]: https://github.com/mattbierner/hashtrie
 [benchmarks]: http://github.com/mattbierner/js-hashtrie-benchmark
 [pdata]: https://github.com/exclipy/pdata

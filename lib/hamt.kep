@@ -45,6 +45,8 @@ var MAX_INDEX_NODE := BUCKET_SIZE / 2;
 
 var MIN_ARRAY_NODE := BUCKET_SIZE / 4;
 
+var EDIT_NONE := 0;
+
 /* Nothing
  ******************************************************************************/
 var nothing := ({});
@@ -227,7 +229,7 @@ var isLeaf = \node ->
  * @param mask Index node mask before child added.
  * @param subNodes Index node children before child added.
  */
-var expand = \frag child bitmap subNodes -> {
+var expand = \edit frag child bitmap subNodes -> {
     var bit = bitmap;
     var arr = [], count = 0;
     for (var i = 0; bit; i = i + 1) {
@@ -238,13 +240,13 @@ var expand = \frag child bitmap subNodes -> {
         bit = bit >>> 1;
     }
     arr.(frag) = child;
-    return new ArrayNode(0, count + 1, arr);
+    return new ArrayNode(edit, count + 1, arr);
 };
 
 /**
  * Collapse an array node into a indexed node.
  */
-var pack = \removed elements -> {
+var pack = \edit removed elements -> {
     var children = [],
         bitmap = 0;
     
@@ -255,7 +257,7 @@ var pack = \removed elements -> {
             bitmap = bitmap | (1 << i);
         }
     }
-    return new IndexedNode(0, bitmap, children);
+    return new IndexedNode(edit, bitmap, children);
 };
 
 /**
@@ -275,7 +277,9 @@ in
             subH1 = hashFragment(shift, h1),
             subH2 = hashFragment(shift, h2)
         in
-            new IndexedNode(0, toBitmap subH1 | toBitmap subH2,
+            new IndexedNode(
+                EDIT_NONE,
+                toBitmap subH1 | toBitmap subH2,
                 ?subH1 === subH2
                     :[mergeLeaves(shift + SIZE, n1, n2)]
                     :?subH1 < subH2 : [n1, n2] : [n2, n1]);
@@ -344,7 +348,7 @@ in
     \config ->
         new Tree(
             false,
-            0, {
+            EDIT_NONE, {
                 keyEq: (config && config.keyEq) || defKeyCompare,
                 hash: (config && config.hash) || hash
             },
@@ -458,16 +462,16 @@ var alter;
 /**
  * Leaf::modify
  */
-Leaf.prototype.modify := \eq shift f h k =self->
+Leaf.prototype.modify := \eq edit shift f h k =self->
     ?eq(self.key, k)
         :let v = f(self.value) in
             ?isNothing v
                 :empty
-                :new Leaf(0, h, k, v)
+                :new Leaf(edit, h, k, v)
     :let v = f() in
         ?isNothing v
             :self
-            :mergeLeaves(shift, self, new Leaf(0, h, k, v));
+            :mergeLeaves(shift, self, new Leaf(edit, h, k, v));
 
 /**
  * Leaf::mutate
@@ -495,11 +499,11 @@ Leaf.prototype.mutate := \eq edit shift f h k =self-> {
 /**
  * Collision::modify
  */
-Collision.prototype.modify = \eq shift f h k =self-> let
+Collision.prototype.modify = \eq edit shift f h k =self-> let
     list = updateCollisionList(eq, self.children, f, k)
 in
     ?list.length > 1
-        :new Collision(0, self.hash, list)
+        :new Collision(edit, self.hash, list)
         :list.(0);
 
 /**
@@ -507,7 +511,7 @@ in
  */
 Collision.prototype.mutate = \eq edit shift f h k =self-> {
     if (edit != self.edit) {
-        var m = self.modify(eq, shift, f, h, k);
+        var m = self.modify(eq, edit, shift, f, h, k);
         m.edit = edit;
         return m;
     }
@@ -521,13 +525,13 @@ Collision.prototype.mutate = \eq edit shift f h k =self-> {
 /**
  * IndexedNode::modify
  */
-IndexedNode.prototype.modify = \eq shift f h k =self#{children}-> let
+IndexedNode.prototype.modify = \eq edit shift f h k =self#{children}-> let
     frag = hashFragment(shift, h),
     bit = toBitmap frag,
     indx = fromBitmap(self.mask, bit),
     exists = self.mask & bit,
     
-    child = alter(eq, false, 0, ?exists : children.(indx) : empty, shift + SIZE, f, h, k),
+    child = alter(false, eq, edit, ?exists : children.(indx) : empty, shift + SIZE, f, h, k),
     
     removed = exists && isEmpty child,
     added = !exists && !isEmpty child,
@@ -545,21 +549,21 @@ in
         :?children.length <= 2 && isLeaf children.(indx ^ 1)
             :children.(indx ^ 1) // collapse
             :new IndexedNode(
-                0,
+                edit,
                 bitmap,
                 arraySpliceOut(indx, self.children))
             
     :?added
         :?self.children.length >= MAX_INDEX_NODE
-            :expand(frag, child, self.mask, children)
+            :expand(edit, frag, child, self.mask, children)
             :new IndexedNode(
-                0,
+                edit,
                 bitmap,
                 arraySpliceIn(indx, child, children))
     
     // Modify
     :new IndexedNode(
-        0,
+        edit,
         bitmap,
         arrayUpdate(indx, child, children));
 
@@ -568,7 +572,7 @@ in
  */
 IndexedNode.prototype.mutate = \eq edit shift f h k =self#{children}-> {
     if (edit != self.edit) {
-        var m = self.modify(eq, shift, f, h, k);
+        var m = self.modify(eq, edit, shift, f, h, k);
         m.edit = edit;
         return m;
     }
@@ -578,7 +582,7 @@ IndexedNode.prototype.mutate = \eq edit shift f h k =self#{children}-> {
         indx := fromBitmap(self.mask, bit),
         exists := self.mask & bit,
         
-        child := alter(eq, true, edit, ?exists : children.(indx) : empty, shift + SIZE, f, h, k),
+        child := alter(true, eq, edit, ?exists : children.(indx) : empty, shift + SIZE, f, h, k),
         
         removed := exists && isEmpty child,
         added := !exists && !isEmpty child,
@@ -600,7 +604,7 @@ IndexedNode.prototype.mutate = \eq edit shift f h k =self#{children}-> {
         self.children.splice(indx, 1);
     } else if (added) {
         if (self.children.length >= MAX_INDEX_NODE) {
-            return expand(frag, child, self.mask, children);
+            return expand(edit, frag, child, self.mask, children);
         }
         self.bitmap = bitmap;
         self.children.splice(indx, 0, child);
@@ -615,29 +619,29 @@ IndexedNode.prototype.mutate = \eq edit shift f h k =self#{children}-> {
 /**
  * ArrayNode::modify
  */
-ArrayNode.prototype.modify = \eq shift f h k =self-> let
+ArrayNode.prototype.modify = \eq edit shift f h k =self-> let
     frag = hashFragment(shift, h),
     child = self.children.(frag),
-    newChild = alter(eq, false, 0, child, shift + SIZE, f, h, k)
+    newChild = alter(false, eq, edit, child, shift + SIZE, f, h, k)
 in
     ?isEmpty child && !isEmpty newChild
         // add
         :new ArrayNode(
-            0,
+            edit,
             self.count + 1,
             arrayUpdate(frag, newChild, self.children))
     
     :?!isEmpty child && isEmpty newChild
         // remove
         :?self.count - 1 <= MIN_ARRAY_NODE
-            :pack(frag, self.children)
+            :pack(edit, frag, self.children)
             :new ArrayNode(
-                0,
+                edit,
                 self.count - 1,
                 arrayUpdate(frag, empty, self.children))
     // Modify
     :new ArrayNode(
-        0,
+        edit,
         self.count,
         arrayUpdate(frag, newChild, self.children));
 
@@ -646,14 +650,14 @@ in
  */
 ArrayNode.prototype.mutate = \eq edit shift f h k =self-> {
     if (edit != self.edit) {
-        var m = self.modify(eq, shift, f, h, k);
+        var m = self.modify(eq, edit, shift, f, h, k);
         m.edit = edit;
         return m;
     }
     
     var frag := hashFragment(shift, h),
         child = self.children.(frag),
-        newChild = alter(eq, true, edit, child, shift + SIZE, f, h, k);
+        newChild = alter(true, eq, edit, child, shift + SIZE, f, h, k);
     
     if (isEmpty child && !isEmpty newChild) {
         // add
@@ -662,7 +666,7 @@ ArrayNode.prototype.mutate = \eq edit shift f h k =self-> {
     } else if (!isEmpty child && isEmpty newChild) {
         // remove
         if (self.count - 1 <= MIN_ARRAY_NODE)
-            return pack(frag, self.children);
+            return pack(edit, frag, self.children);
         self.count = self.count - 1;
         self.children.(frag) = empty;
     } else {
@@ -672,15 +676,15 @@ ArrayNode.prototype.mutate = \eq edit shift f h k =self-> {
     return self;
 };
 
-alter := \eq mutable edit n shift f h k ->
+alter := \mutate eq edit n shift f h k ->
     ?isEmpty n
         :let v = f() in
             ?isNothing v
                 :empty
-                :new Leaf(0, h, k, v)
-    :?edit
+                :new Leaf(edit, h, k, v)
+    :?mutate
         :n.mutate(eq, edit, shift, f, h, k)
-        :n.modify(eq, shift, f, h, k);
+        :n.modify(eq, edit, shift, f, h, k);
 
 /* Queries
  ******************************************************************************/
@@ -732,8 +736,8 @@ has := \k m ->
 modify := \k f m ->
     Tree.setRoot(
         alter(
-            m.config.keyEq,
             m.mutable,
+            m.config.keyEq,
             m.edit,
             m.root,
             0,
