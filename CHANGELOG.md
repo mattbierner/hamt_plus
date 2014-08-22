@@ -1,5 +1,8 @@
 # ChangeLog #
 
+## 0.0.5 - Aug 22, 2014
+* Fixed `CollisionNode` updates not using node values.
+
 ## 0.0.4 - Aug 21, 2014
 * Fixed `CollisionNode` not having an `edit` member.
 

@@ -1,7 +1,8 @@
 /*
- * THIS FILE IS AUTO GENERATED from 'lib/hamt.kep'
+ * THIS FILE IS AUTO GENERATED FROM 'lib/hamt.kep'
  * DO NOT EDIT
-*/define(["require", "exports"], (function(require, exports) {
+*/
+define(["require", "exports"], (function(require, exports) {
     "use strict";
     var hash, make, beginMutation, endMutation, mutate, tryGet, get, has, set, modify, remove, fold, count,
             pairs, keys, values, __seq = (function(x, y) {
@@ -112,7 +113,7 @@
                 subH2)), ((subH1 === subH2) ? [mergeLeaves(edit, (shift + 5), n1, n2)] : ((
                 subH1 < subH2) ? [n1, n2] : [n2, n1])))));
         }),
-        modifyCollisionList = (function(mutate, eq, h, list, f, k) {
+        modifyCollisionList = (function(mutate, eq, edit, h, list, f, k) {
             var target, i = 0;
             for (var len = list.length;
                 (i < len);
@@ -124,8 +125,11 @@
                 }
             }
             var v = (target ? f(target.value) : f());
-            return ((nothing === v) ? arraySpliceOut(mutate, i, list) : arrayUpdate(mutate, i, new(Leaf)(h,
-                k, v), list));
+            if ((nothing === v)) return arraySpliceOut(mutate, i, list);
+            else {
+                return arrayUpdate(mutate, i, (target ? target.modify(mutate, eq, edit, 0, f, h, k) : new(
+                    Leaf)(edit, h, k, v)), list);
+            }
         }),
         Tree = (function(mutable, edit, config, root) {
             var self = this;
@@ -211,7 +215,8 @@
     }));
     (Collision.prototype.modify = (function(mutate0, eq, edit, shift, f, h, k) {
         var self = this,
-            list = modifyCollisionList((mutate0 && (edit === self.edit)), eq, self.children, f, k);
+            list = modifyCollisionList((mutate0 && (edit === self.edit)), eq, edit, h, self.children, f,
+                k);
         if ((list.length <= 1)) return list[0];
         return ((mutate0 && (edit === self.edit)) ? self : new(Collision)(edit, h, list));
     }));

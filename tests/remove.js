@@ -55,6 +55,18 @@ exports.delete_collision = function(test) {
     test.done();
 };
 
+exports.delete_collision_no_exists = function(test) {
+    var h = hamt.make({'hash': function(){ return 0; }});
+    var h1 = hamt.set('b', 5, hamt.set('a', 3, h));
+    var h2 = hamt.remove('c', h1);
+    
+    test.equal(hamt.get('a', h2), 3);
+    test.equal(hamt.get('b', h2), 5);
+    test.equal(hamt.get('c', h2), null);
+
+    test.done();
+};
+
 exports.remove_many = function(test) {
     var insert = ["n", "U", "p", "^", "h", "w", "W", "x", "S", "f", "H", "m", "g",
                "l", "b", "_", "V", "Z", "G", "o", "F", "Q", "a", "k", "j", "r",

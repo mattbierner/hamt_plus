@@ -321,12 +321,13 @@ in
  * 
  * @param mutate Should mutation be used?
  * @param eq Key compare function.
+ * @param edit.
  * @param h Hash of collision.
  * @param list Collision list.
  * @param f Child mutation function.
  * @param k Target key to mutate.
  */
-var modifyCollisionList = \mutate eq h list f k -> {
+var modifyCollisionList = \mutate eq edit h list f k -> {
     var target, i = 0;
     for (var len = list.length; i < len; i = i + 1)
     with child = list.(i) in {
@@ -336,10 +337,16 @@ var modifyCollisionList = \mutate eq h list f k -> {
         }
     }
     
-    return let v = ?target : f(target.value) : f() in
-        ?isNothing v
-            :arraySpliceOut(mutate, i, list)
-            :arrayUpdate(mutate, i, new Leaf(h, k, v), list);
+    var v := ?target : f(target.value) : f();
+    if (isNothing v)
+        return arraySpliceOut(mutate, i, list);
+    else {
+        return arrayUpdate(
+            mutate,
+            i,
+            ?target : target.modify(mutate, eq, edit, 0, f, h, k) : new Leaf(edit, h, k, v),
+            list);
+    }
 };
 
 /* Definition
@@ -527,6 +534,8 @@ Collision.prototype.modify = \mutate eq edit shift f h k =self-> {
     var list := modifyCollisionList(
         mutate && canEdit(edit, self),
         eq,
+        edit,
+        h,
         self.children,
         f,
         k);
