@@ -174,12 +174,12 @@ hash := \str -> {
 var empty := null;
 
 /**
- * Leaf holding a value.
+ * Leaf holding a single value.
  * 
- * @member edit 
+ * @member edit
  * @member hash Hash of key.
- * @member key Key.
- * @member value Value stored.
+ * @member key
+ * @member value
  */
 var Leaf := function \edit hash key value =self-> {
     self.edit = edit;
@@ -191,11 +191,12 @@ var Leaf := function \edit hash key value =self-> {
 /**
  * Leaf holding multiple values with the same hash but different keys.
  * 
- * @member edit 
+ * @member edit
  * @member hash Hash of key.
  * @member children Array of collision children node.
  */
 var Collision := function \edit hash children =self-> {
+    self.edit = edit;
     self.hash = hash;
     self.children = children;
 };
@@ -206,7 +207,7 @@ var Collision := function \edit hash children =self-> {
  * Uses a bitmap and array to pack children.
  * 
  * @member edit
- * @member mask Bitmap that encode the positions of children in the array.
+ * @member mask Bitmap that encodes the positions of children.
  * @member children Array of child nodes.
  */
 var IndexedNode := function \edit mask children =self-> {
@@ -228,7 +229,7 @@ var ArrayNode := function \edit count children =self-> {
     self.children = children;
 };
 
-/* 
+/* Operations
  ******************************************************************************/
 var isEmpty := (!);
 
@@ -249,17 +250,18 @@ var isLeaf = \node ->
 /**
  * Expand an indexed node into an array node.
  * 
+ * @param edit Edit child added in.
  * @param frag Index of added child.
  * @param child Added child.
- * @param mask Index node mask before child added.
- * @param subNodes Index node children before child added.
+ * @param mask Indexed node's mask before child added.
+ * @param children Indexed node's children before child added.
  */
-var expand = \edit frag child bitmap subNodes -> {
+var expand = \edit frag child bitmap children -> {
     var bit = bitmap;
     var arr = [], count = 0;
     for (var i = 0; bit; i = i + 1) {
         if (bit & 1) {
-            arr.(i) = subNodes.(count);
+            arr.(i) = children.(count);
             count = count + 1;
         }
         bit = bit >>> 1;
@@ -270,24 +272,29 @@ var expand = \edit frag child bitmap subNodes -> {
 
 /**
  * Collapse an array node into a indexed node.
+ * 
+ * @param edit Edit child removed in.
+ * @param removed Index of removed child.
+ * @param children Children of array node before child removed.
  */
-var pack = \edit removed elements -> {
-    var children = [],
+var pack = \edit removed children -> {
+    var packed = [],
         bitmap = 0;
     
-    for (var i = 0, len = elements.length; i < len; i = i + 1)
-    with elem = elements.(i) in {
+    for (var i = 0, len = children.length; i < len; i = i + 1)
+    with elem = children.(i) in {
         if (i !== removed && !isEmpty elem) {
-            children.push(elem);
+            packed.push(elem);
             bitmap = bitmap | (1 << i);
         }
     }
-    return new IndexedNode(edit, bitmap, children);
+    return new IndexedNode(edit, bitmap, packed);
 };
 
 /**
  * Merge two leaf nodes.
  * 
+ * @param edit
  * @param shift Current shift.
  * @param n1 Node.
  * @param n2 Node.
@@ -311,6 +318,12 @@ in
 
 /**
  * Update an entry in a collision list.
+ * 
+ * @param mutate Should mutation be used?
+ * @param eq Key compare function.
+ * @param list Collision list.
+ * @param f Child mutation function.
+ * @param k Target key to mutate.
  */
 var modifyCollisionList = \mutate eq list f k -> {
     for (var i = 0, len = list.length; i < len; i = i + 1)
@@ -333,6 +346,18 @@ var modifyCollisionList = \mutate eq list f k -> {
 
 /* Definition
  ******************************************************************************/
+/**
+ * HAMT
+ * 
+ * Opaque map object manipulated by APIs.
+ * 
+ * Stores metadata and the root of the actual map tree data structure.
+ * 
+ * @member mutable Is the map in a mutable state?
+ * @member edit Current edit.
+ * @member config Metadata on how the map operates.
+ * @member root Root of HAMT tree.
+ */
 var Tree := function \mutable edit config root =self-> {
     self.mutable = mutable;
     self.edit = edit;
@@ -516,22 +541,12 @@ Collision.prototype.modify = \mutate eq edit shift f h k =self-> {
         :new Collision(edit, h, list);
 };
 
-var updateIndexedNode := \mutate node edit bitmap children -> {
-    if (mutate) {
-        node.mask = bitmap;
-        node.children = children;
-        return node;
-    } else {
-        return new IndexedNode(edit, bitmap, children);
-    }
-};
-
 /**
  * IndexedNode::modify
  */
 IndexedNode.prototype.modify := \mutate eq edit shift f h k =self#{children}-> {
-    var e = mutate && canEdit(edit, self);
-    var frag := hashFragment(shift, h),
+    var e := mutate && canEdit(edit, self),
+        frag := hashFragment(shift, h),
         bit := toBitmap frag,
         indx := fromBitmap(self.mask, bit),
         exists := self.mask & bit,
@@ -548,84 +563,75 @@ IndexedNode.prototype.modify := \mutate eq edit shift f h k =self#{children}-> {
                 :self.mask;
     
     if (!bitmap) {
+        // No children, delete the node
         return empty;
-    } else if (removed) {
+    }
+    
+    // Determine how to update.
+    var newChildren;
+    if (removed) {
         if (children.length <= 2 && isLeaf children.(indx ^ 1)) {
             // collapse
             return children.(indx ^ 1);
         }
-        return updateIndexedNode(
-            e,
-            self,
-            edit,
-            bitmap,
-            arraySpliceOut(e, indx, self.children));
+        newChildren = arraySpliceOut(e, indx, children);
     } else if (added) {
         if (self.children.length >= MAX_INDEX_NODE)
             return expand(edit, frag, child, self.mask, children);
         
-        return updateIndexedNode(
-            e,
-            self,
-            edit,
-            bitmap,
-            arraySpliceIn(e, indx, child, self.children));
+        newChildren = arraySpliceIn(e, indx, child, children);
     } else { // modify
-        return updateIndexedNode(
-            e,
-            self,
-            edit,
-            bitmap,
-            arrayUpdate(e, indx, child, self.children));
+        newChildren = arrayUpdate(e, indx, child, children);
     }
-};
-
-var updateArrayNode := \mutate node edit count children -> {
-    if (mutate) {
-        node.count = count;
-        node.children = children;
-        return node;
+    
+    // Perform the update
+    if (e) {
+        // Mutate
+        self.mask = bitmap;
+        self.children = newChildren;
+        return self;
     } else {
-        return new ArrayNode(edit, count, children);
+        // Transform
+        return new IndexedNode(edit, bitmap, newChildren);
     }
 };
 
 /**
  * ArrayNode::modify
  */
-ArrayNode.prototype.modify = \mutate eq edit shift f h k =self-> {
-    var e = mutate && canEdit(edit, self);
-    
-    var frag := hashFragment(shift, h),
-        child = self.children.(frag),
+ArrayNode.prototype.modify = \mutate eq edit shift f h k =self#{count children}-> {
+    var e := mutate && canEdit(edit, self),
+        frag := hashFragment(shift, h),
+        child = children.(frag),
         newChild = alter(e, eq, edit, child, shift + SIZE, f, h, k);
     
+    // Determine how to update.
+    var newCount, newChildren;
     if (isEmpty child && !isEmpty newChild) {
         // add
-        return updateArrayNode(
-            e,
-            self,
-            edit,
-            self.count + 1,
-            arrayUpdate(e, frag, newChild, self.children));
+        newCount = count + 1;
+        newChildren = arrayUpdate(e, frag, newChild, children);
     } else if (!isEmpty child && isEmpty newChild) {
         // remove
         if (self.count - 1 <= MIN_ARRAY_NODE)
             return pack(edit, frag, self.children);
-        return updateArrayNode(
-            e,
-            self,
-            edit,
-            self.count - 1,
-            arrayUpdate(e, frag, empty, self.children));
+        newCount = count - 1;
+        newChildren = arrayUpdate(e, frag, empty, children);
     } else {
         // modify
-       return updateArrayNode(
-            e,
-            self,
-            edit,
-            self.count,
-            arrayUpdate(e, frag, newChild, self.children));
+        newCount = count;
+        newChildren = arrayUpdate(e, frag, newChild, children);
+    }
+    
+    // Perform the update
+    if (e) {
+        // Mutate
+        self.count = newCount;
+        self.children = newChildren;
+        return self;
+    } else {
+        // Transform
+        return new ArrayNode(edit, newCount, newChildren);
     }
 };
 
@@ -687,9 +693,11 @@ has := \k m ->
 /**
  * Alter a value already stored in the map.
  * 
+ * `f` is called with zero arguments if entry does not exist.
+ * 
  * @param k Key.
  * @param f Function mapping current value to new value.
- * @param m HAMT
+ * @param m HAMT.
  */
 modify := \k f m ->
     Tree.setRoot(
@@ -709,7 +717,7 @@ modify := \k f m ->
  * 
  * @param k Key.
  * @param v Value to store.
- * @param m HAMT
+ * @param m HAMT.
  */
 set := \k v m ->
     modify(k, constant v, m);
@@ -777,8 +785,8 @@ ArrayNode.prototype.fold := \f z ={children}-> {
  * 
  * Order of nodes is not guaranteed.
  * 
- * @param f Function mapping previous value and key value object to new value.
- * @param z Starting value.
+ * @param f Function mapping accumulated value and key value object to new value.
+ * @param z Initial value.
  * @param m Hashtrie
  */
 fold := \f z {root} ->
@@ -789,7 +797,9 @@ fold := \f z {root} ->
 /* Aggregate
  ******************************************************************************/
 /**
- * Get the number of entries.
+ * Get the number of entries in a map.
+ * 
+ * @param m HAMT.
  */
 count = fold @ (+ 1) @ 0;
 
@@ -797,6 +807,8 @@ count = fold @ (+ 1) @ 0;
  * Get array of all key value pairs as arrays of [key, value].
  * 
  * Order is not guaranteed.
+ * 
+ * @param m HAMT.
  */
 pairs = let build = \p {key value} -> { p.push [key, value]; return p; } in
     \m ->
@@ -806,6 +818,8 @@ pairs = let build = \p {key value} -> { p.push [key, value]; return p; } in
  * Get array of all keys.
  * 
  * Order is not guaranteed.
+ * 
+ * @param m HAMT.
  */
 keys = let build = \p {key} -> { p.push key; return p; } in
     \m ->
@@ -815,6 +829,8 @@ keys = let build = \p {key} -> { p.push key; return p; } in
  * Get array of all values.
  * 
  * Order is not guaranteed, duplicates will be preserved.
+ * 
+ * @param m HAMT.
  */
 values = let build = \p {value} -> { p.push value; return p; } in
     \m ->

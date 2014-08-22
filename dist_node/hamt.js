@@ -54,6 +54,7 @@ var Leaf = (function(edit, hash0, key, value) {
 }),
     Collision = (function(edit, hash0, children) {
         var self = this;
+        (self.edit = edit);
         (self.hash = hash0);
         (self.children = children);
     }),
@@ -72,14 +73,14 @@ var Leaf = (function(edit, hash0, key, value) {
     isLeaf = (function(node) {
         return (((node === null) || (node instanceof Leaf)) || (node instanceof Collision));
     }),
-    expand = (function(edit, frag, child, bitmap, subNodes) {
+    expand = (function(edit, frag, child, bitmap, children) {
         var bit = bitmap,
             arr = [],
             count = 0;
         for (var i = 0; bit;
             (i = (i + 1))) {
             if ((bit & 1)) {
-                (arr[i] = subNodes[count]);
+                (arr[i] = children[count]);
                 (count = (count + 1));
             }
             (bit = (bit >>> 1));
@@ -87,19 +88,19 @@ var Leaf = (function(edit, hash0, key, value) {
         (arr[frag] = child);
         return new(ArrayNode)(edit, (count + 1), arr);
     }),
-    pack = (function(edit, removed, elements) {
-        var children = [],
+    pack = (function(edit, removed, children) {
+        var packed = [],
             bitmap = 0;
-        for (var i = 0, len = elements.length;
+        for (var i = 0, len = children.length;
             (i < len);
             (i = (i + 1))) {
-            var elem = elements[i];
+            var elem = children[i];
             if (((i !== removed) && (!(!elem)))) {
-                children.push(elem);
+                packed.push(elem);
                 (bitmap = (bitmap | (1 << i)));
             }
         }
-        return new(IndexedNode)(edit, bitmap, children);
+        return new(IndexedNode)(edit, bitmap, packed);
     }),
     mergeLeaves = (function(edit, shift, n1, n2) {
         var h1 = n1.hash,
@@ -211,15 +212,6 @@ var alter;
     if ((list.length <= 1)) return list[0];
     return ((mutate0 && (edit === self.edit)) ? self : new(Collision)(edit, h, list));
 }));
-var updateIndexedNode = (function(mutate0, node, edit, bitmap, children) {
-    if (mutate0) {
-        (node.mask = bitmap);
-        (node.children = children);
-        return node;
-    } else {
-        return new(IndexedNode)(edit, bitmap, children);
-    }
-});
 (IndexedNode.prototype.modify = (function(mutate0, eq, edit, shift, f, h, k) {
     var self = this,
         children = self["children"],
@@ -234,40 +226,53 @@ var updateIndexedNode = (function(mutate0, node, edit, bitmap, children) {
         bitmap0 = (removed ? (self.mask & (~bit)) : (added ? (self.mask | bit) : self.mask));
     if ((!bitmap0)) {
         return null;
-    } else if (removed) {
+    }
+    var newChildren;
+    if (removed) {
         if (((children.length <= 2) && isLeaf(children[(indx ^ 1)]))) {
             return children[(indx ^ 1)];
         }
-        return updateIndexedNode(e, self, edit, bitmap0, arraySpliceOut(e, indx, self.children));
+        (newChildren = arraySpliceOut(e, indx, children));
     } else if (added) {
         if ((self.children.length >= MAX_INDEX_NODE)) return expand(edit, frag, child, self.mask, children);
-        return updateIndexedNode(e, self, edit, bitmap0, arraySpliceIn(e, indx, child, self.children));
+        (newChildren = arraySpliceIn(e, indx, child, children));
     } else {
-        return updateIndexedNode(e, self, edit, bitmap0, arrayUpdate(e, indx, child, self.children));
+        (newChildren = arrayUpdate(e, indx, child, children));
+    }
+    if (e) {
+        (self.mask = bitmap0);
+        (self.children = newChildren);
+        return self;
+    } else {
+        return new(IndexedNode)(edit, bitmap0, newChildren);
     }
 }));
-var updateArrayNode = (function(mutate0, node, edit, count, children) {
-    if (mutate0) {
-        (node.count = count);
-        (node.children = children);
-        return node;
-    } else {
-        return new(ArrayNode)(edit, count, children);
-    }
-});
 (ArrayNode.prototype.modify = (function(mutate0, eq, edit, shift, f, h, k) {
     var self = this,
-        x, x0, x1, x2, e = (mutate0 && (edit === self.edit)),
+        count = self["count"],
+        children = self["children"],
+        node, x, x0, x1, x2, e = (mutate0 && ((node = self), (edit === node.edit))),
         frag = ((h >>> shift) & mask),
-        child = self.children[frag],
-        newChild = alter(e, eq, edit, child, (shift + 5), f, h, k);
+        child = children[frag],
+        newChild = alter(e, eq, edit, child, (shift + 5), f, h, k),
+        newCount, newChildren;
     if ((((x = child), (!x)) && (!((x0 = newChild), (!x0))))) {
-        return updateArrayNode(e, self, edit, (self.count + 1), arrayUpdate(e, frag, newChild, self.children));
+        (newCount = (count + 1));
+        (newChildren = arrayUpdate(e, frag, newChild, children));
     } else if (((!((x1 = child), (!x1))) && ((x2 = newChild), (!x2)))) {
         if (((self.count - 1) <= MIN_ARRAY_NODE)) return pack(edit, frag, self.children);
-        return updateArrayNode(e, self, edit, (self.count - 1), arrayUpdate(e, frag, null, self.children));
+        (newCount = (count - 1));
+        (newChildren = arrayUpdate(e, frag, null, children));
     } else {
-        return updateArrayNode(e, self, edit, self.count, arrayUpdate(e, frag, newChild, self.children));
+        (newCount = count);
+        (newChildren = arrayUpdate(e, frag, newChild, children));
+    }
+    if (e) {
+        (self.count = newCount);
+        (self.children = newChildren);
+        return self;
+    } else {
+        return new(ArrayNode)(edit, newCount, newChildren);
     }
 }));
 (alter = (function(mutate0, eq, edit, n, shift, f, h, k) {
