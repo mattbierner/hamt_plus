@@ -321,27 +321,25 @@ in
  * 
  * @param mutate Should mutation be used?
  * @param eq Key compare function.
+ * @param h Hash of collision.
  * @param list Collision list.
  * @param f Child mutation function.
  * @param k Target key to mutate.
  */
-var modifyCollisionList = \mutate eq list f k -> {
-    for (var i = 0, len = list.length; i < len; i = i + 1)
+var modifyCollisionList = \mutate eq h list f k -> {
+    var target, i = 0;
+    for (var len = list.length; i < len; i = i + 1)
     with child = list.(i) in {
-        if (eq(child.key, k))
-        with v = f(child.value) in {
-            return ?isNothing v
-                :arraySpliceOut(mutate, i, list)
-                :arrayUpdate(mutate, i, v, list);
+        if (child.key === k) {
+            target = child;
+            break;
         }
     }
     
-    // no matching collision child found
-    with v = f() in {
-        return ?isNothing v
-            :list
-            :arrayPush(mutate, v, list);
-    }
+    return let v = ?target : f(target.value) : f() in
+        ?isNothing v
+            :arraySpliceOut(mutate, i, list)
+            :arrayUpdate(mutate, i, new Leaf(h, k, v), list);
 };
 
 /* Definition
@@ -787,7 +785,7 @@ ArrayNode.prototype.fold := \f z ={children}-> {
  * 
  * @param f Function mapping accumulated value and key value object to new value.
  * @param z Initial value.
- * @param m Hashtrie
+ * @param m HAMT
  */
 fold := \f z {root} ->
     ?isEmpty root

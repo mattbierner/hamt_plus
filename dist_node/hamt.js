@@ -111,18 +111,19 @@ var Leaf = (function(edit, hash0, key, value) {
             mergeLeaves(edit, (shift + 5), n1, n2)
         ] : ((subH1 < subH2) ? [n1, n2] : [n2, n1])))));
     }),
-    modifyCollisionList = (function(mutate, eq, list, f, k) {
-        for (var i = 0, len = list.length;
+    modifyCollisionList = (function(mutate, eq, h, list, f, k) {
+        var target, i = 0;
+        for (var len = list.length;
             (i < len);
             (i = (i + 1))) {
             var child = list[i];
-            if (eq(child.key, k)) {
-                var v = f(child.value);
-                return ((nothing === v) ? arraySpliceOut(mutate, i, list) : arrayUpdate(mutate, i, v, list));
+            if ((child.key === k)) {
+                (target = child);
+                break;
             }
         }
-        var v0 = f();
-        return ((nothing === v0) ? list : arrayUpdate(mutate, list.length, v0, list));
+        var v = (target ? f(target.value) : f());
+        return ((nothing === v) ? arraySpliceOut(mutate, i, list) : arrayUpdate(mutate, i, new(Leaf)(h, k, v), list));
     }),
     Tree = (function(mutable, edit, config, root) {
         var self = this;
