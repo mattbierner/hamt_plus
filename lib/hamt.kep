@@ -464,10 +464,10 @@ Leaf.prototype.lookup = \eq _ _ k =self->
 /**
  * Collision::get
  */
-Collision.prototype.lookup = \eq _ h k =self-> {
-    if (h === self.hash) {
-        for (var i = 0, len = self.children.length; i < len; i = i + 1)
-        with child = self.children.(i) in {
+Collision.prototype.lookup = \eq _ h k ={hash children}-> {
+    if (h === hash) {
+        for (var i = 0, len = children.length; i < len; i = i + 1)
+        with child = children.(i) in {
             if (eq(child.key, k))
                 return child.value;
         }
@@ -478,20 +478,20 @@ Collision.prototype.lookup = \eq _ h k =self-> {
 /**
  * IndexedNode::get
  */
-IndexedNode.prototype.lookup = \eq shift h k =self-> let
+IndexedNode.prototype.lookup = \eq shift h k ={children mask}-> let
     frag = hashFragment(shift, h),
     bit = toBitmap frag
 in
-    ?self.mask & bit
-        :lookup(eq, self.children.(fromBitmap(self.mask, bit)), shift + SIZE, h, k)
+    ?mask & bit
+        :lookup(eq, children.(fromBitmap(mask, bit)), shift + SIZE, h, k)
         :nothing;
 
 /**
  * ArrayNode::get
  */
-ArrayNode.prototype.lookup = \eq shift h k =self-> let
+ArrayNode.prototype.lookup = \eq shift h k ={children}-> let
     frag = hashFragment(shift, h),
-    child = self.children.(frag)
+    child = children.(frag)
 in
     lookup(eq, child, shift + SIZE, h, k);
 
@@ -531,6 +531,12 @@ Leaf.prototype.modify := \mutate eq edit shift f h k =self-> {
  * Collision::modify
  */
 Collision.prototype.modify = \mutate eq edit shift f h k =self-> {
+    if (self.hash !== h)
+        return let v := f() in
+            ?isNothing v
+                :self
+                :mergeLeaves(edit, shift, self, new Leaf(edit, h, k, v));
+    
     var list := modifyCollisionList(
         mutate && canEdit(edit, self),
         eq,

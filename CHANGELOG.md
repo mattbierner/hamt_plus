@@ -1,5 +1,10 @@
 # ChangeLog #
 
+## 0.0.6 - September 27, 2014
+* Fixed collision nodes on unexpanded branch not being expanded on insertions
+  further down branch. Thanks raymond-w-ko for reporting this and providing test
+  data for `hamt`.
+
 ## 0.0.5 - Aug 22, 2014
 * Fixed `CollisionNode` updates not using node values.
 

@@ -168,29 +168,34 @@ var lookup;
     return (eq(self.key, k) ? self.value : nothing);
 }));
 (Collision.prototype.lookup = (function(eq, _, h, k) {
-    var self = this;
-    if ((h === self.hash)) {
-        for (var i = 0, len = self.children.length;
+    var __o = this,
+        hash0 = __o["hash"],
+        children = __o["children"];
+    if ((h === hash0)) {
+        for (var i = 0, len = children.length;
             (i < len);
             (i = (i + 1))) {
-            var child = self.children[i];
+            var child = children[i];
             if (eq(child.key, k)) return child.value;
         }
     }
     return nothing;
 }));
 (IndexedNode.prototype.lookup = (function(eq, shift, h, k) {
-    var self = this,
+    var __o = this,
+        children = __o["children"],
+        mask0 = __o["mask"],
         frag = ((h >>> shift) & mask),
         bit = (1 << frag),
         bitmap;
-    return ((self.mask & bit) ? lookup(eq, self.children[((bitmap = self.mask), popcount((bitmap & (bit - 1))))], (
-        shift + 5), h, k) : nothing);
+    return ((mask0 & bit) ? lookup(eq, children[((bitmap = mask0), popcount((bitmap & (bit - 1))))], (shift + 5),
+        h, k) : nothing);
 }));
 (ArrayNode.prototype.lookup = (function(eq, shift, h, k) {
-    var self = this,
+    var __o = this,
+        children = __o["children"],
         frag = ((h >>> shift) & mask),
-        child = self.children[frag];
+        child = children[frag];
     return lookup(eq, child, (shift + 5), h, k);
 }));
 (lookup = (function(eq, n, shift, h, k) {
@@ -213,8 +218,12 @@ var alter;
     return ((nothing === v0) ? self : mergeLeaves(edit, shift, self, new(Leaf)(edit, h, k, v0)));
 }));
 (Collision.prototype.modify = (function(mutate0, eq, edit, shift, f, h, k) {
-    var self = this,
-        list = modifyCollisionList((mutate0 && (edit === self.edit)), eq, edit, h, self.children, f, k);
+    var self = this;
+    if ((self.hash !== h)) {
+        var v = f();
+        return ((nothing === v) ? self : mergeLeaves(edit, shift, self, new(Leaf)(edit, h, k, v)));
+    }
+    var list = modifyCollisionList((mutate0 && (edit === self.edit)), eq, edit, h, self.children, f, k);
     if ((list.length <= 1)) return list[0];
     return ((mutate0 && (edit === self.edit)) ? self : new(Collision)(edit, h, list));
 }));

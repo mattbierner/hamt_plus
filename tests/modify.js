@@ -18,7 +18,8 @@ exports.non_existant = function(test) {
 };
 
 exports.collision = function(test) {
-    var h1 = hamt.set('a', 3, hamt.make({'hash': function() { return 0; }}));
+    var h = hamt.make({'hash': function() { return 0; }});
+    var h1 = hamt.set('a', 3, h);
     var h2 = hamt.set('b', 5, h1);
     
     var h3 = hamt.modify('a', function(x) { return x * 2; }, h2);

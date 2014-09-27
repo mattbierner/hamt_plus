@@ -74,6 +74,18 @@ exports.collision = function(test) {
     test.done();
 };
 
+exports.collision_expansion = function(test) {
+    var h1 = hamt.set('a', 3, hamt.make({'hash': function(x) { return x === 'a' || x === 'b' ? 0 : 1; }}))
+    var h2 = hamt.set('b', 5, h1);
+    var h3 = hamt.set('c', 7, h2);
+
+    test.equal(hamt.get('a', h3), 3);
+    test.equal(hamt.get('b', h3), 5);
+    test.equal(hamt.get('c', h3), 7);
+
+    test.done();
+};
+
 exports.many_unorder = function(test) {
     var arr = ["n", "U", "p", "^", "h", "w", "W", "x", "S", "f", "H", "m", "g",
                "l", "b", "_", "V", "Z", "G", "o", "F", "Q", "a", "k", "j", "r",
