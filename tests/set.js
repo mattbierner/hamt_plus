@@ -53,6 +53,16 @@ describe('set', () => {
         assert.strictEqual(5, h3.getHash(0, 'b'));
         assert.strictEqual(7, h3.getHash(1, 'c'));
     });
+    
+    it('should use custom hash function', () => {
+        const hash = () => 0;
+        const h = hamt.make({ hash: hash })
+            .set('a', 3)
+            .set('b', 5);
+    
+        assert.strictEqual(3, h.getHash(0, 'a'));
+        assert.strictEqual(5, h.getHash(0, 'b'));
+    });
 
     it('should set values correctly from list with no order', () => {
         const arr = [
