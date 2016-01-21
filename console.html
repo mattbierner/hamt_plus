@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head></head>
+
+<body lang="en">
+    
+    <script type="application/javascript" src="resources/require.js"></script>
+    
+    <script type="application/javascript">
+        requirejs.config({
+            paths: {
+                'hamt': 'dist/hamt'
+            }
+        });
+
+        require([
+           'hamt'],
+        function(
+            hamt)
+        {
+            var h = hamt.empty;
+          //  for (var i = 'A'.charCodeAt(0); i < 'z'.charCodeAt(0); ++i) {
+            //    h = hamt.set(h, String.fromCharCode(i), i);
+            //}
+              //  var h1 = hamt.setHash(hamt.empty, 0, 'a', 3);
+                
+     var insert = [
+        "The", "Time", "Traveller", "for", "so", "it", "will", "be",
+        "convenient", "to", "speak", "of", "him", "was", "expounding",
+        "a", "recondite", "matter", "to", "us", "His", "grey", "eyes",
+        "shone", "and", "twinkled", "and", "his", "usually", "pale",
+        "face", "was", "flushed", "and", "animated"];
+
+    
+    var h = hamt.mutate(function(h) {
+        insert.forEach(function(x) {
+            hamt.set(x, x, h);
+        });
+    }, hamt.make());
+    
+
+        });
+    </script>
+
+</body>
+    
+</html>
