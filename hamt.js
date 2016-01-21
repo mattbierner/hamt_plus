@@ -316,7 +316,7 @@ var updateCollisionList = function updateCollisionList(h, list, f, k) {
 
 /* Editing
  ******************************************************************************/
-var Leaf__modify = function Leaf__modify(shift, f, h, k) {
+var Leaf__modify = function Leaf__modify(edit, keyEq, shift, f, h, k) {
     if (k === this.key) {
         var _v = f(this.value);
         if (_v === this.value) return this;
@@ -326,7 +326,7 @@ var Leaf__modify = function Leaf__modify(shift, f, h, k) {
     return v === nothing ? this : mergeLeaves(shift, this.hash, this, h, Leaf(h, k, v));
 };
 
-var Collision__modify = function Collision__modify(shift, f, h, k) {
+var Collision__modify = function Collision__modify(edit, keyEq, shift, f, h, k) {
     if (h === this.hash) {
         var list = updateCollisionList(this.hash, this.children, f, k);
         if (list === this.children) return this;
@@ -337,7 +337,7 @@ var Collision__modify = function Collision__modify(shift, f, h, k) {
     return v === nothing ? this : mergeLeaves(shift, this.hash, this, h, Leaf(h, k, v));
 };
 
-var IndexedNode__modify = function IndexedNode__modify(shift, f, h, k) {
+var IndexedNode__modify = function IndexedNode__modify(edit, keyEq, shift, f, h, k) {
     var mask = this.mask;
     var children = this.children;
     var frag = hashFragment(shift, h);
@@ -345,7 +345,7 @@ var IndexedNode__modify = function IndexedNode__modify(shift, f, h, k) {
     var indx = fromBitmap(mask, bit);
     var exists = mask & bit;
     var current = exists ? children[indx] : empty;
-    var child = current._modify(shift + SIZE, f, h, k);
+    var child = current._modify(edit, keyEq, shift + SIZE, f, h, k);
 
     if (current === child) return this;
 
@@ -365,12 +365,12 @@ var IndexedNode__modify = function IndexedNode__modify(shift, f, h, k) {
     return IndexedNode(mask, arrayUpdate(false, indx, child, children));
 };
 
-var ArrayNode__modify = function ArrayNode__modify(shift, f, h, k) {
+var ArrayNode__modify = function ArrayNode__modify(edit, keyEq, shift, f, h, k) {
     var count = this.size;
     var children = this.children;
     var frag = hashFragment(shift, h);
     var child = children[frag];
-    var newChild = (child || empty)._modify(shift + SIZE, f, h, k);
+    var newChild = (child || empty)._modify(edit, keyEq, shift + SIZE, f, h, k);
 
     if (child === newChild) return this;
 
@@ -387,7 +387,7 @@ var ArrayNode__modify = function ArrayNode__modify(shift, f, h, k) {
     return ArrayNode(count, arrayUpdate(false, frag, newChild, children));
 };
 
-empty._modify = function (_, f, h, k) {
+empty._modify = function (edit, keyEq, shift, f, h, k) {
     var v = f();
     return v === nothing ? empty : Leaf(h, k, v);
 };
@@ -567,8 +567,7 @@ Map.prototype.isEmpty = function () {
     Returns a map with the modified value. Does not alter `map`.
 */
 var modifyHash = hamt.modifyHash = function (f, hash, key, map) {
-    var root = map._root;
-    var newRoot = root._modify(0, f, hash, key);
+    var newRoot = map._root._modify(map._editable ? map._edit : -1, map._config.keyEq, 0, f, hash, key);
     return map.setRoot(newRoot);
 };
 
