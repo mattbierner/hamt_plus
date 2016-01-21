@@ -13,7 +13,6 @@ describe('modify', () => {
   });
 
     it('should insert elements as normal into empty map', () => {
-
       const h1 = hamt.mutate(function(m) {
           hamt.set('a', 3, m);
           hamt.set('b', 5, m);
@@ -22,24 +21,23 @@ describe('modify', () => {
       assert.strictEqual(3, h1.get('a'));
       assert.strictEqual(3, h1.get('a'));
   });
+
+
+  it('should no leak mutation out of cope.', () => {
+      const h = hamt.set('a', 100, hamt.make());
+
+      const h1 = hamt.mutate(function(m) {
+          hamt.set('a', 3, m);
+          hamt.set('b', 5, m);
+      }, h);
+
+      assert.strictEqual(100, hamt.get('a', h));
+      assert.strictEqual(3, hamt.get('a', h1));
+
+      assert.strictEqual(undefined, hamt.get('b', h));
+      assert.strictEqual(5, hamt.get('b', h1));
+  });
 });
-
-exports.does_not_effect_pre_value = function(test) {
-    const h = hamt.set('a', 100, hamt.make());
-
-    const h1 = hamt.mutate(function(m) {
-        hamt.set('a', 3, m);
-        hamt.set('b', 5, m);
-    }, h);
-
-    assert.strictEqual(hamt.get('a', h), 100);
-    assert.strictEqual(hamt.get('a', h1), 3);
-
-    assert.strictEqual(hamt.get('b', h), null);
-    assert.strictEqual(hamt.get('b', h1), 5);
-
-
-};
 
 exports.does_not_effect_post_value = function(test) {
     const h = hamt.mutate(function(m) {
