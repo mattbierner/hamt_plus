@@ -110,12 +110,11 @@ var arrayUpdate = function arrayUpdate(mutate, at, v, arr) {
 */
 var arraySpliceOut = function arraySpliceOut(mutate, at, arr) {
     var len = arr.length;
-    var out = arr;
     var i = 0,
         g = 0;
+    var out = arr;
     if (mutate) {
-        arr.splice(at, 1);
-        return arr;
+        i = g = at;
     } else {
         out = new Array(len - 1);
         while (i < at) {
