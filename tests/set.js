@@ -7,19 +7,19 @@ describe('set', () => {
         assert.strictEqual(3, hamt.set('a', 3, hamt.make()).get('a'));
         assert.strictEqual(3, hamt.make().set('a', 3).get('a'));
     });
-    
+
     it('should add entry to existing map', () => {
         const h = hamt.make().set('a', 3);
         const h1 = h.set('b', 5);
 
         assert.strictEqual(3, hamt.get('a', h1));
         assert.strictEqual(5, hamt.get('b', h1));
-        
+
         assert.strictEqual(3, hamt.get('a', h));
         assert.strictEqual(undefined, hamt.get('b', h));
     });
-    
-    
+
+
     it('should overwrite entry in existing map', () => {
         const h1 = hamt.make()
             .set('a', 3)
@@ -35,33 +35,47 @@ describe('set', () => {
         assert.strictEqual(5, hamt.get('b', h1));
         assert.strictEqual(10, hamt.get('c', h1));
     });
-    
+
     it('should handle collisions correctly', () => {
         const h1 = hamt.make().setHash(0, 'a', 3);
         const h2 = h1.setHash(0, 'b', 5);
-    
+
         assert.strictEqual(3, h2.getHash(0, 'a'));
         assert.strictEqual(5, h2.getHash(0, 'b'));
     });
-    
+
     it('should add to collisions correctly', () => {
         const h1 = hamt.make().setHash(0, 'a', 3);
         const h2 = h1.setHash(0, 'b', 5);
         const h3 = h2.setHash(1, 'c', 7);
-    
+
         assert.strictEqual(3, h3.getHash(0, 'a'));
         assert.strictEqual(5, h3.getHash(0, 'b'));
         assert.strictEqual(7, h3.getHash(1, 'c'));
     });
-    
+
     it('should use custom hash function', () => {
         const hash = () => 0;
         const h = hamt.make({ hash: hash })
             .set('a', 3)
             .set('b', 5);
-    
+
         assert.strictEqual(3, h.getHash(0, 'a'));
         assert.strictEqual(5, h.getHash(0, 'b'));
+    });
+
+    it('should use custom key function', () => {
+        const keyEq = (x, y) => x.value === y.value;
+        const h = hamt.make({ keyEq: keyEq })
+            .set({ value: 'a' }, 3)
+            .set({ value: 'b' }, 5)
+            .set({ value: 'a' }, 7);
+
+        assert.strictEqual(2, h.count());
+        assert.strictEqual(7, h.get({ value: 'a' }));
+        assert.strictEqual(undefined, h.get('a'));
+        assert.strictEqual(5, h.get({ value: 'b' }));
+        assert.strictEqual(undefined, h.get('b'));
     });
 
     it('should set values correctly from list with no order', () => {
@@ -71,12 +85,12 @@ describe('set', () => {
             "B", "A", "y", "\\", "R", "D", "i", "c", "]", "C", "[", "e", "s",
             "t", "J", "E", "q", "v", "M", "T", "N", "L", "K", "Y", "d", "P",
             "u", "I", "O", "`", "X"];
-    
+
         let h = hamt.make();
         arr.forEach(function(x) {
             h = h.set(x, x);
         });
-    
+
         arr.forEach(function(x) {
             assert.strictEqual(x, hamt.get(x, h));
         });
@@ -92,7 +106,7 @@ describe('set', () => {
             assert.strictEqual(i, hamt.get(String.fromCharCode(i), h));
         }
     });
-    
+
     it('should not mutate map if value is same as stored', () => {
         {
             const h = hamt.make().set('a', 3);
@@ -111,7 +125,7 @@ describe('set', () => {
             assert.strictEqual(h1, h);
         }
     });
-    
+
     it('should not mutate map if value in collision is same as stored', () => {
         const h = hamt.make().setHash(0, 'a', 3).setHash(0, 'b', 3);
         const h1 = h.setHash(0, 'a', 3);

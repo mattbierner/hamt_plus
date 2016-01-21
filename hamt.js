@@ -297,11 +297,11 @@ var mergeLeaves = function mergeLeaves(shift, h1, n1, h2, n2) {
     @param f Update function.
     @param k Key to update.
 */
-var updateCollisionList = function updateCollisionList(h, list, f, k) {
+var updateCollisionList = function updateCollisionList(keyEq, h, list, f, k) {
     var len = list.length;
     for (var i = 0; i < len; ++i) {
         var child = list[i];
-        if (child.key === k) {
+        if (keyEq(k, child.key)) {
             var value = child.value;
             var _newValue = f(value);
             if (_newValue === value) return list;
@@ -317,7 +317,7 @@ var updateCollisionList = function updateCollisionList(h, list, f, k) {
 /* Editing
  ******************************************************************************/
 var Leaf__modify = function Leaf__modify(edit, keyEq, shift, f, h, k) {
-    if (k === this.key) {
+    if (keyEq(k, this.key)) {
         var _v = f(this.value);
         if (_v === this.value) return this;
         return _v === nothing ? empty : Leaf(h, k, _v);
@@ -328,7 +328,7 @@ var Leaf__modify = function Leaf__modify(edit, keyEq, shift, f, h, k) {
 
 var Collision__modify = function Collision__modify(edit, keyEq, shift, f, h, k) {
     if (h === this.hash) {
-        var list = updateCollisionList(this.hash, this.children, f, k);
+        var list = updateCollisionList(keyEq, this.hash, this.children, f, k);
         if (list === this.children) return this;
 
         return list.length > 1 ? Collision(this.hash, list) : list[0]; // collapse single element collision list
