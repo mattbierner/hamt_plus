@@ -574,7 +574,7 @@ var defKeyCompare = function defKeyCompare(x, y) {
 };
 
 hamt.make = function (config) {
-    return new Map(false, 0, {
+    return new Map(0, 0, {
         keyEq: config && config.keyEq || defKeyCompare,
         hash: config && config.hash || hash
     }, empty);
@@ -682,7 +682,7 @@ Map.prototype.remove = Map.prototype.delete = function (key) {
 /* Mutation
  ******************************************************************************/
 var beginMutation = hamt.beginMutation = function (tree) {
-    return new Map(true, tree._edit + 1, tree._config, tree._root);
+    return new Map(tree._editable + 1, tree._edit + 1, tree._config, tree._root);
 };
 
 Map.prototype.beginMutation = function () {
@@ -695,7 +695,8 @@ Map.prototype.beginMutation = function () {
  * @param tree HAMT
  */
 var endMutation = hamt.endMutation = function (tree) {
-    return new Map(false, tree._edit, tree._config, tree._root);
+    tree._editable = tree._editable && tree._editable - 1;
+    return tree;
 };
 
 Map.prototype.endMutation = function () {

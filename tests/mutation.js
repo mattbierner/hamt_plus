@@ -20,9 +20,32 @@ describe('mutate', () => {
 
       assert.strictEqual(2, h1.size);
       assert.strictEqual(3, h1.get('a'));
-      assert.strictEqual(3, h1.get('a'));
+      assert.strictEqual(5, h1.get('b'));
   });
 
+  it('should allow for nested mutations', () => {
+    let h1 = hamt.make().beginMutation().beginMutation();
+    h1.set('a', 3);
+    h1.set('b', 5);
+    h1.endMutation();
+
+    assert.strictEqual(2, h1.size);
+    assert.strictEqual(3, h1.get('a'));
+    assert.strictEqual(5, h1.get('b'));
+
+    h1.set('a', 30);
+    assert.strictEqual(2, h1.size);
+    assert.strictEqual(30, h1.get('a'));
+    assert.strictEqual(5, h1.get('b'));
+
+    h1.endMutation();
+
+    h1.set('a', 300);
+    assert.strictEqual(2, h1.size);
+    assert.strictEqual(30, h1.get('a'));
+    assert.strictEqual(5, h1.get('b'));
+
+});
 
   it('should no leak mutation to values before scope', () => {
       const h = hamt.set('a', 100, hamt.make());
