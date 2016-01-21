@@ -110,12 +110,17 @@ var arrayUpdate = function arrayUpdate(mutate, at, v, arr) {
 */
 var arraySpliceOut = function arraySpliceOut(mutate, at, arr) {
     var len = arr.length;
-    var out = new Array(len - 1);
+    var out = arr;
     var i = 0,
         g = 0;
-    while (i < at) {
-        out[g++] = arr[i++];
-    }++i;
+    if (mutate) {
+        i = g = at;
+    } else {
+        out = new Array(len - 1);
+        while (i < at) {
+            out[g++] = arr[i++];
+        }++i;
+    }
     while (i < len) {
         out[g++] = arr[i++];
     }return out;
@@ -381,7 +386,7 @@ var IndexedNode__modify = function IndexedNode__modify(edit, keyEq, shift, f, h,
         if (!bitmap) return empty;
         if (children.length <= 2 && isLeaf(children[indx ^ 1])) return children[indx ^ 1]; // collapse
 
-        newChildren = arraySpliceOut(false, indx, children);
+        newChildren = arraySpliceOut(canEdit, indx, children);
     } else if (!exists && !isEmptyNode(child)) {
         // add
         if (children.length >= MAX_INDEX_NODE) return expand(edit, frag, child, mask, children);
@@ -411,17 +416,29 @@ var ArrayNode__modify = function ArrayNode__modify(edit, keyEq, shift, f, h, k) 
 
     if (child === newChild) return this;
 
+    var canEdit = canEditNode(edit, this);
+    var newChildren = undefined;
     if (isEmptyNode(child) && !isEmptyNode(newChild)) {
         // add
-        return ArrayNode(edit, count + 1, arrayUpdate(false, frag, newChild, children));
-    }
-    if (!isEmptyNode(child) && isEmptyNode(newChild)) {
+        ++count;
+        newChildren = arrayUpdate(canEdit, frag, newChild, children);
+    } else if (!isEmptyNode(child) && isEmptyNode(newChild)) {
         // remove
-        return count - 1 <= MIN_ARRAY_NODE ? pack(edit, count, frag, children) : ArrayNode(edit, count - 1, arrayUpdate(false, frag, empty, children));
+        --count;
+        if (count <= MIN_ARRAY_NODE) return pack(edit, count, frag, children);
+        newChildren = arrayUpdate(canEdit, frag, empty, children);
+    } else {
+        // modify
+        newChildren = arrayUpdate(canEdit, frag, newChild, children);
     }
 
-    // modify
-    return ArrayNode(edit, count, arrayUpdate(false, frag, newChild, children));
+    if (canEdit) {
+        this.size = count;
+        this.children = newChildren;
+        return this;
+    } else {
+        return ArrayNode(edit, count, newChildren);
+    }
 };
 
 empty._modify = function (edit, keyEq, shift, f, h, k) {

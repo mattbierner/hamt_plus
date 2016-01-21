@@ -47,7 +47,7 @@ describe('mutate', () => {
 
 });
 
-  it('should no leak mutation to values before scope', () => {
+  it('should not leak mutation to values before scope', () => {
       const h = hamt.set('a', 100, hamt.make());
 
       const h1 = hamt.mutate(function(m) {
