@@ -116,17 +116,27 @@ describe('mutate', () => {
         "shone", "twinkled", "his", "usually", "pale",
         "face", "flushed", "animated"];
 
-    const h = hamt.mutate(function(h) {
-        insert.forEach(function(x) {
-            h.set(x, x);
-        });
-    }, hamt.make());
+    const h = hamt.mutate(h =>
+        insert.forEach(x => h.set(x, x)),
+        hamt.make());
 
     assert.strictEqual(insert.length, h.size);
+    insert.forEach(x =>
+        assert.strictEqual(x, h.get(x)));
 
-    insert.forEach(function(x) {
-        assert.strictEqual(x, h.get(x));
-    });
+    const h1 = hamt.mutate(h =>
+        insert.forEach(x => h.set(x + x, x)),
+        h);
+
+      assert.strictEqual(insert.length, h.size);
+      insert.forEach(x =>
+          assert.strictEqual(x, h.get(x)));
+
+      assert.strictEqual(insert.length * 2, h1.size);
+      insert.forEach(x => {
+          assert.strictEqual(x, h1.get(x));
+          assert.strictEqual(x, h1.get(x + x))
+      });
   });
 
 });
