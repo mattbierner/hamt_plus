@@ -161,13 +161,15 @@ var isEmptyNode = function isEmptyNode(x) {
 /**
 	Leaf holding a value.
 
+  @member edit Edit of the node.
 	@member hash Hash of key.
 	@member key Key.
 	@member value Value stored.
 */
-var Leaf = function Leaf(hash, key, value) {
+var Leaf = function Leaf(edit, hash, key, value) {
     return {
         type: LEAF,
+        edit: edit,
         hash: hash,
         key: key,
         value: value,
@@ -178,12 +180,14 @@ var Leaf = function Leaf(hash, key, value) {
 /**
 	Leaf holding multiple values with the same hash but different keys.
 
+  @member edit Edit of the node.
 	@member hash Hash of key.
 	@member children Array of collision children node.
 */
-var Collision = function Collision(hash, children) {
+var Collision = function Collision(edit, hash, children) {
     return {
         type: COLLISION,
+        edit: edit,
         hash: hash,
         children: children,
         _modify: Collision__modify
@@ -195,12 +199,14 @@ var Collision = function Collision(hash, children) {
 
 	Uses a bitmap and array to pack children.
 
+  @member edit Edit of the node.
 	@member mask Bitmap that encode the positions of children in the array.
 	@member children Array of child nodes.
 */
-var IndexedNode = function IndexedNode(mask, children) {
+var IndexedNode = function IndexedNode(edit, mask, children) {
     return {
         type: INDEX,
+        edit: edit,
         mask: mask,
         children: children,
         _modify: IndexedNode__modify
@@ -210,12 +216,14 @@ var IndexedNode = function IndexedNode(mask, children) {
 /**
 	Internal node with many children.
 
+  @member edit Edit of the node.
 	@member size Number of children.
 	@member children Array of child nodes.
 */
-var ArrayNode = function ArrayNode(size, children) {
+var ArrayNode = function ArrayNode(edit, size, children) {
     return {
         type: ARRAY,
+        edit: edit,
         size: size,
         children: children,
         _modify: ArrayNode__modify
@@ -239,7 +247,7 @@ var isLeaf = function isLeaf(node) {
 	@param mask Index node mask before child added.
 	@param subNodes Index node children before child added.
 */
-var expand = function expand(frag, child, bitmap, subNodes) {
+var expand = function expand(edit, frag, child, bitmap, subNodes) {
     var arr = [];
     var bit = bitmap;
     var count = 0;
@@ -248,7 +256,7 @@ var expand = function expand(frag, child, bitmap, subNodes) {
         bit >>>= 1;
     }
     arr[frag] = child;
-    return ArrayNode(count + 1, arr);
+    return ArrayNode(edit, count + 1, arr);
 };
 
 /**
@@ -258,7 +266,7 @@ var expand = function expand(frag, child, bitmap, subNodes) {
 	@param removed Index of removed element.
 	@param elements Array node children before remove.
 */
-var pack = function pack(count, removed, elements) {
+var pack = function pack(edit, count, removed, elements) {
     var children = new Array(count - 1);
     var g = 0;
     var bitmap = 0;
@@ -269,7 +277,7 @@ var pack = function pack(count, removed, elements) {
             bitmap |= 1 << i;
         }
     }
-    return IndexedNode(bitmap, children);
+    return IndexedNode(edit, bitmap, children);
 };
 
 /**
@@ -281,12 +289,12 @@ var pack = function pack(count, removed, elements) {
 	@param h2 Node 2 hash.
 	@param n2 Node 2.
 */
-var mergeLeaves = function mergeLeaves(shift, h1, n1, h2, n2) {
-    if (h1 === h2) return Collision(h1, [n2, n1]);
+var mergeLeaves = function mergeLeaves(edit, shift, h1, n1, h2, n2) {
+    if (h1 === h2) return Collision(edit, h1, [n2, n1]);
 
     var subH1 = hashFragment(shift, h1);
     var subH2 = hashFragment(shift, h2);
-    return IndexedNode(toBitmap(subH1) | toBitmap(subH2), subH1 === subH2 ? [mergeLeaves(shift + SIZE, h1, n1, h2, n2)] : subH1 < subH2 ? [n1, n2] : [n2, n1]);
+    return IndexedNode(edit, toBitmap(subH1) | toBitmap(subH2), subH1 === subH2 ? [mergeLeaves(edit, shift + SIZE, h1, n1, h2, n2)] : subH1 < subH2 ? [n1, n2] : [n2, n1]);
 };
 
 /**
@@ -297,7 +305,7 @@ var mergeLeaves = function mergeLeaves(shift, h1, n1, h2, n2) {
     @param f Update function.
     @param k Key to update.
 */
-var updateCollisionList = function updateCollisionList(keyEq, h, list, f, k) {
+var updateCollisionList = function updateCollisionList(edit, keyEq, h, list, f, k) {
     var len = list.length;
     for (var i = 0; i < len; ++i) {
         var child = list[i];
@@ -306,12 +314,12 @@ var updateCollisionList = function updateCollisionList(keyEq, h, list, f, k) {
             var _newValue = f(value);
             if (_newValue === value) return list;
 
-            return _newValue === nothing ? arraySpliceOut(false, i, list) : arrayUpdate(false, i, Leaf(h, k, _newValue), list);
+            return _newValue === nothing ? arraySpliceOut(false, i, list) : arrayUpdate(false, i, Leaf(edit, h, k, _newValue), list);
         }
     }
 
     var newValue = f();
-    return newValue === nothing ? list : arrayUpdate(false, len, Leaf(h, k, newValue), list);
+    return newValue === nothing ? list : arrayUpdate(false, len, Leaf(edit, h, k, newValue), list);
 };
 
 /* Editing
@@ -320,21 +328,21 @@ var Leaf__modify = function Leaf__modify(edit, keyEq, shift, f, h, k) {
     if (keyEq(k, this.key)) {
         var _v = f(this.value);
         if (_v === this.value) return this;
-        return _v === nothing ? empty : Leaf(h, k, _v);
+        return _v === nothing ? empty : Leaf(edit, h, k, _v);
     }
     var v = f();
-    return v === nothing ? this : mergeLeaves(shift, this.hash, this, h, Leaf(h, k, v));
+    return v === nothing ? this : mergeLeaves(edit, shift, this.hash, this, h, Leaf(edit, h, k, v));
 };
 
 var Collision__modify = function Collision__modify(edit, keyEq, shift, f, h, k) {
     if (h === this.hash) {
-        var list = updateCollisionList(keyEq, this.hash, this.children, f, k);
+        var list = updateCollisionList(edit, keyEq, this.hash, this.children, f, k);
         if (list === this.children) return this;
 
-        return list.length > 1 ? Collision(this.hash, list) : list[0]; // collapse single element collision list
+        return list.length > 1 ? Collision(edit, this.hash, list) : list[0]; // collapse single element collision list
     }
     var v = f();
-    return v === nothing ? this : mergeLeaves(shift, this.hash, this, h, Leaf(h, k, v));
+    return v === nothing ? this : mergeLeaves(edit, shift, this.hash, this, h, Leaf(edit, h, k, v));
 };
 
 var IndexedNode__modify = function IndexedNode__modify(edit, keyEq, shift, f, h, k) {
@@ -354,15 +362,15 @@ var IndexedNode__modify = function IndexedNode__modify(edit, keyEq, shift, f, h,
         var bitmap = mask & ~bit;
         if (!bitmap) return empty;
         return children.length <= 2 && isLeaf(children[indx ^ 1]) ? children[indx ^ 1] // collapse
-        : IndexedNode(bitmap, arraySpliceOut(false, indx, children));
+        : IndexedNode(edit, bitmap, arraySpliceOut(false, indx, children));
     }
     if (!exists && !isEmptyNode(child)) {
         // add
-        return children.length >= MAX_INDEX_NODE ? expand(frag, child, mask, children) : IndexedNode(mask | bit, arraySpliceIn(false, indx, child, children));
+        return children.length >= MAX_INDEX_NODE ? expand(edit, frag, child, mask, children) : IndexedNode(edit, mask | bit, arraySpliceIn(false, indx, child, children));
     }
 
     // modify
-    return IndexedNode(mask, arrayUpdate(false, indx, child, children));
+    return IndexedNode(edit, mask, arrayUpdate(false, indx, child, children));
 };
 
 var ArrayNode__modify = function ArrayNode__modify(edit, keyEq, shift, f, h, k) {
@@ -376,20 +384,20 @@ var ArrayNode__modify = function ArrayNode__modify(edit, keyEq, shift, f, h, k) 
 
     if (isEmptyNode(child) && !isEmptyNode(newChild)) {
         // add
-        return ArrayNode(count + 1, arrayUpdate(false, frag, newChild, children));
+        return ArrayNode(edit, count + 1, arrayUpdate(false, frag, newChild, children));
     }
     if (!isEmptyNode(child) && isEmptyNode(newChild)) {
         // remove
-        return count - 1 <= MIN_ARRAY_NODE ? pack(count, frag, children) : ArrayNode(count - 1, arrayUpdate(false, frag, empty, children));
+        return count - 1 <= MIN_ARRAY_NODE ? pack(edit, count, frag, children) : ArrayNode(edit, count - 1, arrayUpdate(false, frag, empty, children));
     }
 
     // modify
-    return ArrayNode(count, arrayUpdate(false, frag, newChild, children));
+    return ArrayNode(edit, count, arrayUpdate(false, frag, newChild, children));
 };
 
 empty._modify = function (edit, keyEq, shift, f, h, k) {
     var v = f();
-    return v === nothing ? empty : Leaf(h, k, v);
+    return v === nothing ? empty : Leaf(edit, h, k, v);
 };
 
 /*
@@ -567,7 +575,7 @@ Map.prototype.isEmpty = function () {
     Returns a map with the modified value. Does not alter `map`.
 */
 var modifyHash = hamt.modifyHash = function (f, hash, key, map) {
-    var newRoot = map._root._modify(map._editable ? map._edit : -1, map._config.keyEq, 0, f, hash, key);
+    var newRoot = map._root._modify(map._editable ? map._edit : NaN, map._config.keyEq, 0, f, hash, key);
     return map.setRoot(newRoot);
 };
 
