@@ -402,7 +402,12 @@ function Map(editable, edit, config, root) {
 };
 
 Map.prototype.setRoot = function (newRoot) {
-    return newRoot === this._root ? this : new Map(this._editable, this._edit, this._config, newRoot);
+    if (newRoot === this._root) return this;
+    if (this._edit) {
+        this._root = newRoot;
+        return this;
+    }
+    return new Map(this._editable, this._edit, this._config, newRoot);
 };
 
 /* Queries
@@ -415,11 +420,12 @@ Map.prototype.setRoot = function (newRoot) {
 var tryGetHash = hamt.tryGetHash = function (alt, hash, key, map) {
     var node = map._root;
     var shift = 0;
+    var keyEq = map._config.keyEq;
     while (true) {
         switch (node.type) {
             case LEAF:
                 {
-                    return key === node.key ? node.value : alt;
+                    return keyEq(key, node.key) ? node.value : alt;
                 }
             case COLLISION:
                 {
@@ -427,7 +433,7 @@ var tryGetHash = hamt.tryGetHash = function (alt, hash, key, map) {
                         var children = node.children;
                         for (var i = 0, len = children.length; i < len; ++i) {
                             var child = children[i];
-                            if (key === child.key) return child.value;
+                            if (keyEq(key, child.key)) return child.value;
                         }
                     }
                     return alt;
