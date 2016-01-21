@@ -107,25 +107,26 @@ describe('mutate', () => {
       assert.strictEqual(30, hamt.get('a', h2));
   });
 
-});
 
-exports.many = function(test) {
+  it('should handle many insertions correctly', () => {
     const insert = [
         "The", "Time", "Traveller", "for", "so", "it", "will", "be",
         "convenient", "to", "speak", "of", "him", "was", "expounding",
-        "a", "recondite", "matter", "to", "us", "His", "grey", "eyes",
-        "shone", "and", "twinkled", "and", "his", "usually", "pale",
-        "face", "was", "flushed", "and", "animated"];
+        "a", "recondite", "matter", "us", "His", "grey", "eyes",
+        "shone", "twinkled", "his", "usually", "pale",
+        "face", "flushed", "animated"];
 
     const h = hamt.mutate(function(h) {
         insert.forEach(function(x) {
-            hamt.set(x, x, h);
+            h.set(x, x);
         });
     }, hamt.make());
 
-    containsAll(test,
-        hamt.values(h),
-        insert);
+    assert.strictEqual(insert.length, h.size);
 
+    insert.forEach(function(x) {
+        assert.strictEqual(x, h.get(x));
+    });
+  });
 
-};
+});

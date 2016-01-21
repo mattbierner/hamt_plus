@@ -114,7 +114,8 @@ var arraySpliceOut = function arraySpliceOut(mutate, at, arr) {
     var i = 0,
         g = 0;
     if (mutate) {
-        i = g = at;
+        arr.splice(at, 1);
+        return arr;
     } else {
         out = new Array(len - 1);
         while (i < at) {
@@ -136,21 +137,20 @@ var arraySpliceOut = function arraySpliceOut(mutate, at, arr) {
 */
 var arraySpliceIn = function arraySpliceIn(mutate, at, v, arr) {
     var len = arr.length;
-    var out = arr;
-    var i = 0,
-        g = 0;
     if (mutate) {
-        i = g = at;
+        arr.splice(at, 0, v);
+        return arr;
     } else {
-        out = new Array(len + 1);
+        var i = 0,
+            g = 0;
+        var out = new Array(len + 1);
         while (i < at) {
             out[g++] = arr[i++];
-        }
+        }out[g++] = v;
+        while (i < len) {
+            out[g++] = arr[i++];
+        }return out;
     }
-    out[g++] = v;
-    while (i < len) {
-        out[g++] = arr[i++];
-    }return out;
 };
 
 /* Node Structures
