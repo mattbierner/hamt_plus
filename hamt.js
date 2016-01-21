@@ -653,11 +653,7 @@ Map.prototype.remove = Map.prototype.delete = function (key) {
 /* Mutation
  ******************************************************************************/
 var beginMutation = hamt.beginMutation = function (tree) {
-    return new Map(
-    /*true,
-    tree.edit + 1,
-    tree.config,*/
-    tree._root);
+    return new Map(true, tree._edit + 1, tree._config, tree._root);
 };
 
 Map.prototype.beginMutation = function () {
@@ -670,11 +666,7 @@ Map.prototype.beginMutation = function () {
  * @param tree HAMT
  */
 var endMutation = hamt.endMutation = function (tree) {
-    return new Map(
-    /* false,
-     tree.edit,
-     tree.config,*/
-    tree._root);
+    return new Map(false, tree._edit, tree._config, tree._root);
 };
 
 Map.prototype.endMutation = function () {

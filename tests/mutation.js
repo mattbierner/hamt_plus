@@ -3,6 +3,15 @@ const hamt = require('../hamt');
 const assert = require('chai').assert;
 
 describe('modify', () => {
+  it('should insert single element into empty map', () => {
+      const h1 = hamt.mutate(function(m) {
+          hamt.set('a', 3, m);
+      }, hamt.make());
+
+      assert.strictEqual(1, h1.count());
+      assert.strictEqual(3, h1.get('a'));
+  });
+
     it('should insert elements as normal into empty map', () => {
 
       const h1 = hamt.mutate(function(m) {
