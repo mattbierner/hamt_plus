@@ -461,7 +461,7 @@ Map.prototype.tryGetHash = function (alt, hash, key) {
     @see `tryGetHash`
 */
 var tryGet = hamt.tryGet = function (alt, key, map) {
-    return tryGetHash(alt, hash(key), key, map);
+    return tryGetHash(alt, map._config.hash(key), key, map);
 };
 
 Map.prototype.tryGet = function (alt, key) {
@@ -487,7 +487,7 @@ Map.prototype.getHash = function (hash, key) {
     @see `get`
 */
 var get = hamt.get = function (key, map) {
-    return tryGetHash(undefined, hash(key), key, map);
+    return tryGetHash(undefined, map._config.hash(key), key, map);
 };
 
 Map.prototype.get = function (key, alt) {
@@ -509,7 +509,7 @@ Map.prototype.hasHash = function (hash, key) {
     Does an entry exist for `key` in `map`? Uses internal hash function.
 */
 var has = hamt.has = function (key, map) {
-    return hasHash(hash(key), key, map);
+    return hasHash(map._config.hash(key), key, map);
 };
 
 Map.prototype.has = function (key) {
@@ -570,7 +570,7 @@ Map.prototype.modifyHash = function (hash, key, f) {
     @see `modifyHash`
 */
 var modify = hamt.modify = function (f, key, map) {
-    return modifyHash(f, hash(key), key, map);
+    return modifyHash(f, map._config.hash(key), key, map);
 };
 
 Map.prototype.modify = function (key, f) {
@@ -596,7 +596,7 @@ Map.prototype.setHash = function (hash, key, value) {
     @see `setHash`
 */
 var set = hamt.set = function (key, value, map) {
-    return setHash(hash(key), key, value, map);
+    return setHash(map._config.hash(key), key, value, map);
 };
 
 Map.prototype.set = function (key, value) {
@@ -623,7 +623,7 @@ Map.prototype.removeHash = Map.prototype.deleteHash = function (hash, key) {
     @see `removeHash`
 */
 var remove = hamt.remove = function (key, map) {
-    return removeHash(hash(key), key, map);
+    return removeHash(map._config.hash(key), key, map);
 };
 
 Map.prototype.remove = Map.prototype.delete = function (key) {
