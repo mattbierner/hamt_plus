@@ -131,12 +131,18 @@ var arraySpliceOut = function arraySpliceOut(mutate, at, arr) {
 */
 var arraySpliceIn = function arraySpliceIn(mutate, at, v, arr) {
     var len = arr.length;
-    var out = new Array(len + 1);
+    var out = arr;
     var i = 0,
         g = 0;
-    while (i < at) {
-        out[g++] = arr[i++];
-    }out[g++] = v;
+    if (mutate) {
+        i = g = at;
+    } else {
+        out = new Array(len + 1);
+        while (i < at) {
+            out[g++] = arr[i++];
+        }
+    }
+    out[g++] = v;
     while (i < len) {
         out[g++] = arr[i++];
     }return out;
@@ -305,7 +311,7 @@ var mergeLeaves = function mergeLeaves(edit, shift, h1, n1, h2, n2) {
     @param f Update function.
     @param k Key to update.
 */
-var updateCollisionList = function updateCollisionList(edit, keyEq, h, list, f, k) {
+var updateCollisionList = function updateCollisionList(mutate, edit, keyEq, h, list, f, k) {
     var len = list.length;
     for (var i = 0; i < len; ++i) {
         var child = list[i];
@@ -314,12 +320,16 @@ var updateCollisionList = function updateCollisionList(edit, keyEq, h, list, f, 
             var _newValue = f(value);
             if (_newValue === value) return list;
 
-            return _newValue === nothing ? arraySpliceOut(false, i, list) : arrayUpdate(false, i, Leaf(edit, h, k, _newValue), list);
+            return _newValue === nothing ? arraySpliceOut(mutate, i, list) : arrayUpdate(mutate, i, Leaf(edit, h, k, _newValue), list);
         }
     }
 
     var newValue = f();
-    return newValue === nothing ? list : arrayUpdate(false, len, Leaf(edit, h, k, newValue), list);
+    return newValue === nothing ? list : arrayUpdate(mutate, len, Leaf(edit, h, k, newValue), list);
+};
+
+var canEditNode = function canEditNode(edit, node) {
+    return edit === node.edit;
 };
 
 /* Editing
@@ -328,6 +338,10 @@ var Leaf__modify = function Leaf__modify(edit, keyEq, shift, f, h, k) {
     if (keyEq(k, this.key)) {
         var _v = f(this.value);
         if (_v === this.value) return this;
+        if (canEditNode(edit, this)) {
+            this.value = _v;
+            return this;
+        }
         return _v === nothing ? empty : Leaf(edit, h, k, _v);
     }
     var v = f();
@@ -336,7 +350,8 @@ var Leaf__modify = function Leaf__modify(edit, keyEq, shift, f, h, k) {
 
 var Collision__modify = function Collision__modify(edit, keyEq, shift, f, h, k) {
     if (h === this.hash) {
-        var list = updateCollisionList(edit, keyEq, this.hash, this.children, f, k);
+        var canEdit = canEditNode(edit, this);
+        var list = updateCollisionList(canEdit, edit, keyEq, this.hash, this.children, f, k);
         if (list === this.children) return this;
 
         return list.length > 1 ? Collision(edit, this.hash, list) : list[0]; // collapse single element collision list
@@ -357,20 +372,34 @@ var IndexedNode__modify = function IndexedNode__modify(edit, keyEq, shift, f, h,
 
     if (current === child) return this;
 
+    var canEdit = canEditNode(edit, this);
+    var bitmap = mask;
+    var newChildren = undefined;
     if (exists && isEmptyNode(child)) {
         // remove
-        var bitmap = mask & ~bit;
+        bitmap &= ~bit;
         if (!bitmap) return empty;
-        return children.length <= 2 && isLeaf(children[indx ^ 1]) ? children[indx ^ 1] // collapse
-        : IndexedNode(edit, bitmap, arraySpliceOut(false, indx, children));
-    }
-    if (!exists && !isEmptyNode(child)) {
+        if (children.length <= 2 && isLeaf(children[indx ^ 1])) return children[indx ^ 1]; // collapse
+
+        newChildren = arraySpliceOut(false, indx, children);
+    } else if (!exists && !isEmptyNode(child)) {
         // add
-        return children.length >= MAX_INDEX_NODE ? expand(edit, frag, child, mask, children) : IndexedNode(edit, mask | bit, arraySpliceIn(false, indx, child, children));
+        if (children.length >= MAX_INDEX_NODE) return expand(edit, frag, child, mask, children);
+
+        bitmap |= bit;
+        newChildren = arraySpliceIn(canEdit, indx, child, children);
+    } else {
+        // modify
+        newChildren = arrayUpdate(canEdit, indx, child, children);
     }
 
-    // modify
-    return IndexedNode(edit, mask, arrayUpdate(false, indx, child, children));
+    if (canEdit) {
+        this.mask = bitmap;
+        this.children = newChildren;
+        return this;
+    } else {
+        return IndexedNode(edit, bitmap, newChildren);
+    }
 };
 
 var ArrayNode__modify = function ArrayNode__modify(edit, keyEq, shift, f, h, k) {
@@ -411,7 +440,7 @@ function Map(editable, edit, config, root) {
 
 Map.prototype.setRoot = function (newRoot) {
     if (newRoot === this._root) return this;
-    if (this._edit) {
+    if (this._editable) {
         this._root = newRoot;
         return this;
     }
