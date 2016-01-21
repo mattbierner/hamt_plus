@@ -83,26 +83,32 @@ var fromBitmap = function fromBitmap(bitmap, bit) {
 /**
 	Set a value in an array.
 
+  @param mutate Should the input array be mutated?
 	@param at Index to change.
 	@param v New value
 	@param arr Array.
 */
-var arrayUpdate = function arrayUpdate(at, v, arr) {
-    var len = arr.length;
-    var out = new Array(len);
-    for (var i = 0; i < len; ++i) {
-        out[i] = arr[i];
-    }out[at] = v;
+var arrayUpdate = function arrayUpdate(mutate, at, v, arr) {
+    var out = arr;
+    if (!mutate) {
+        var len = arr.length;
+        out = new Array(len);
+        for (var i = 0; i < len; ++i) {
+            out[i] = arr[i];
+        }
+    }
+    out[at] = v;
     return out;
 };
 
 /**
 	Remove a value from an array.
 
+  @param mutate Should the input array be mutated?
 	@param at Index to remove.
 	@param arr Array.
 */
-var arraySpliceOut = function arraySpliceOut(at, arr) {
+var arraySpliceOut = function arraySpliceOut(mutate, at, arr) {
     var len = arr.length;
     var out = new Array(len - 1);
     var i = 0,
@@ -118,11 +124,12 @@ var arraySpliceOut = function arraySpliceOut(at, arr) {
 /**
 	Insert a value into an array.
 
+  @param mutate Should the input array be mutated?
 	@param at Index to insert at.
 	@param v Value to insert,
 	@param arr Array.
 */
-var arraySpliceIn = function arraySpliceIn(at, v, arr) {
+var arraySpliceIn = function arraySpliceIn(mutate, at, v, arr) {
     var len = arr.length;
     var out = new Array(len + 1);
     var i = 0,
@@ -299,12 +306,12 @@ var updateCollisionList = function updateCollisionList(h, list, f, k) {
             var _newValue = f(value);
             if (_newValue === value) return list;
 
-            return _newValue === nothing ? arraySpliceOut(i, list) : arrayUpdate(i, Leaf(h, k, _newValue), list);
+            return _newValue === nothing ? arraySpliceOut(false, i, list) : arrayUpdate(false, i, Leaf(h, k, _newValue), list);
         }
     }
 
     var newValue = f();
-    return newValue === nothing ? list : arrayUpdate(len, Leaf(h, k, newValue), list);
+    return newValue === nothing ? list : arrayUpdate(false, len, Leaf(h, k, newValue), list);
 };
 
 /* Editing
@@ -347,15 +354,15 @@ var IndexedNode__modify = function IndexedNode__modify(shift, f, h, k) {
         var bitmap = mask & ~bit;
         if (!bitmap) return empty;
         return children.length <= 2 && isLeaf(children[indx ^ 1]) ? children[indx ^ 1] // collapse
-        : IndexedNode(bitmap, arraySpliceOut(indx, children));
+        : IndexedNode(bitmap, arraySpliceOut(false, indx, children));
     }
     if (!exists && !isEmptyNode(child)) {
         // add
-        return children.length >= MAX_INDEX_NODE ? expand(frag, child, mask, children) : IndexedNode(mask | bit, arraySpliceIn(indx, child, children));
+        return children.length >= MAX_INDEX_NODE ? expand(frag, child, mask, children) : IndexedNode(mask | bit, arraySpliceIn(false, indx, child, children));
     }
 
     // modify
-    return IndexedNode(mask, arrayUpdate(indx, child, children));
+    return IndexedNode(mask, arrayUpdate(false, indx, child, children));
 };
 
 var ArrayNode__modify = function ArrayNode__modify(shift, f, h, k) {
@@ -369,15 +376,15 @@ var ArrayNode__modify = function ArrayNode__modify(shift, f, h, k) {
 
     if (isEmptyNode(child) && !isEmptyNode(newChild)) {
         // add
-        return ArrayNode(count + 1, arrayUpdate(frag, newChild, children));
+        return ArrayNode(count + 1, arrayUpdate(false, frag, newChild, children));
     }
     if (!isEmptyNode(child) && isEmptyNode(newChild)) {
         // remove
-        return count - 1 <= MIN_ARRAY_NODE ? pack(count, frag, children) : ArrayNode(count - 1, arrayUpdate(frag, empty, children));
+        return count - 1 <= MIN_ARRAY_NODE ? pack(count, frag, children) : ArrayNode(count - 1, arrayUpdate(false, frag, empty, children));
     }
 
     // modify
-    return ArrayNode(count, arrayUpdate(frag, newChild, children));
+    return ArrayNode(count, arrayUpdate(false, frag, newChild, children));
 };
 
 empty._modify = function (_, f, h, k) {
