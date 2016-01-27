@@ -1,5 +1,10 @@
 # ChangeLog #
 
+## 1.0.0 - Janyuar 26, 2016
+* Refork from Hamt 2.1
+  * Duplicates existing Hamt 2.x API.
+* Added constant time size queries.
+
 ## 0.0.6 - September 27, 2014
 * Fixed collision nodes on unexpanded branch not being expanded on insertions
   further down branch. Thanks raymond-w-ko for reporting this and providing test
