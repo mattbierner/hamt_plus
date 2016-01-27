@@ -3,9 +3,9 @@
 function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
 
 /**
-	@fileOverview Hash Array Mapped Trie.
+    @fileOverview Hash Array Mapped Trie.
 
-	Code based on: https://github.com/exclipy/pdata
+    Code based on: https://github.com/exclipy/pdata
 */
 var hamt = {}; // export
 
@@ -32,10 +32,10 @@ var constant = function constant(x) {
 };
 
 /**
-	Get 32 bit hash of string.
+    Get 32 bit hash of string.
 
-	Based on:
-	http://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
+    Based on:
+    http://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript-jquery
 */
 var hash = hamt.hash = function (str) {
     var type = typeof str === 'undefined' ? 'undefined' : _typeof(str);
@@ -53,9 +53,9 @@ var hash = hamt.hash = function (str) {
 /* Bit Ops
  ******************************************************************************/
 /**
-	Hamming weight.
+    Hamming weight.
 
-	Taken from: http://jsperf.com/hamming-weight
+    Taken from: http://jsperf.com/hamming-weight
 */
 var popcount = function popcount(x) {
     x -= x >> 1 & 0x55555555;
@@ -81,12 +81,12 @@ var fromBitmap = function fromBitmap(bitmap, bit) {
 /* Array Ops
  ******************************************************************************/
 /**
-	Set a value in an array.
+    Set a value in an array.
 
-  @param mutate Should the input array be mutated?
-	@param at Index to change.
-	@param v New value
-	@param arr Array.
+    @param mutate Should the input array be mutated?
+    @param at Index to change.
+    @param v New value
+    @param arr Array.
 */
 var arrayUpdate = function arrayUpdate(mutate, at, v, arr) {
     var out = arr;
@@ -102,11 +102,11 @@ var arrayUpdate = function arrayUpdate(mutate, at, v, arr) {
 };
 
 /**
-	Remove a value from an array.
+    Remove a value from an array.
 
-  @param mutate Should the input array be mutated?
-	@param at Index to remove.
-	@param arr Array.
+    @param mutate Should the input array be mutated?
+    @param at Index to remove.
+    @param arr Array.
 */
 var arraySpliceOut = function arraySpliceOut(mutate, at, arr) {
     var len = arr.length;
@@ -127,29 +127,31 @@ var arraySpliceOut = function arraySpliceOut(mutate, at, arr) {
 };
 
 /**
-	Insert a value into an array.
+    Insert a value into an array.
 
-  @param mutate Should the input array be mutated?
-	@param at Index to insert at.
-	@param v Value to insert,
-	@param arr Array.
+    @param mutate Should the input array be mutated?
+    @param at Index to insert at.
+    @param v Value to insert,
+    @param arr Array.
 */
 var arraySpliceIn = function arraySpliceIn(mutate, at, v, arr) {
     var len = arr.length;
     if (mutate) {
-        arr.splice(at, 0, v);
+        var _i = len;
+        while (_i >= at) {
+            arr[_i--] = arr[_i];
+        }arr[at] = v;
         return arr;
-    } else {
-        var i = 0,
-            g = 0;
-        var out = new Array(len + 1);
-        while (i < at) {
-            out[g++] = arr[i++];
-        }out[g++] = v;
-        while (i < len) {
-            out[g++] = arr[i++];
-        }return out;
     }
+    var i = 0,
+        g = 0;
+    var out = new Array(len + 1);
+    while (i < at) {
+        out[g++] = arr[i++];
+    }out[at] = v;
+    while (i < len) {
+        out[++g] = arr[i++];
+    }return out;
 };
 
 /* Node Structures
@@ -160,21 +162,23 @@ var INDEX = 3;
 var ARRAY = 4;
 
 /**
-	Empty node.
+    Empty node.
 */
-var empty = { __hamt_isEmpty: true };
+var empty = {
+    __hamt_isEmpty: true
+};
 
 var isEmptyNode = function isEmptyNode(x) {
     return x === empty || x && x.__hamt_isEmpty;
 };
 
 /**
-	Leaf holding a value.
+    Leaf holding a value.
 
-  @member edit Edit of the node.
-	@member hash Hash of key.
-	@member key Key.
-	@member value Value stored.
+    @member edit Edit of the node.
+    @member hash Hash of key.
+    @member key Key.
+    @member value Value stored.
 */
 var Leaf = function Leaf(edit, hash, key, value) {
     return {
@@ -188,11 +192,11 @@ var Leaf = function Leaf(edit, hash, key, value) {
 };
 
 /**
-	Leaf holding multiple values with the same hash but different keys.
+    Leaf holding multiple values with the same hash but different keys.
 
-  @member edit Edit of the node.
-	@member hash Hash of key.
-	@member children Array of collision children node.
+    @member edit Edit of the node.
+    @member hash Hash of key.
+    @member children Array of collision children node.
 */
 var Collision = function Collision(edit, hash, children) {
     return {
@@ -205,13 +209,13 @@ var Collision = function Collision(edit, hash, children) {
 };
 
 /**
-	Internal node with a sparse set of children.
+    Internal node with a sparse set of children.
 
-	Uses a bitmap and array to pack children.
+    Uses a bitmap and array to pack children.
 
   @member edit Edit of the node.
-	@member mask Bitmap that encode the positions of children in the array.
-	@member children Array of child nodes.
+    @member mask Bitmap that encode the positions of children in the array.
+    @member children Array of child nodes.
 */
 var IndexedNode = function IndexedNode(edit, mask, children) {
     return {
@@ -224,11 +228,11 @@ var IndexedNode = function IndexedNode(edit, mask, children) {
 };
 
 /**
-	Internal node with many children.
+    Internal node with many children.
 
-  @member edit Edit of the node.
-	@member size Number of children.
-	@member children Array of child nodes.
+    @member edit Edit of the node.
+    @member size Number of children.
+    @member children Array of child nodes.
 */
 var ArrayNode = function ArrayNode(edit, size, children) {
     return {
@@ -241,7 +245,7 @@ var ArrayNode = function ArrayNode(edit, size, children) {
 };
 
 /**
-	Is `node` a leaf node?
+    Is `node` a leaf node?
 */
 var isLeaf = function isLeaf(node) {
     return node === empty || node.type === LEAF || node.type === COLLISION;
@@ -250,12 +254,13 @@ var isLeaf = function isLeaf(node) {
 /* Internal node operations.
  ******************************************************************************/
 /**
-	Expand an indexed node into an array node.
+    Expand an indexed node into an array node.
 
-	@param frag Index of added child.
-	@param child Added child.
-	@param mask Index node mask before child added.
-	@param subNodes Index node children before child added.
+  @param edit Current edit.
+    @param frag Index of added child.
+    @param child Added child.
+    @param mask Index node mask before child added.
+    @param subNodes Index node children before child added.
 */
 var expand = function expand(edit, frag, child, bitmap, subNodes) {
     var arr = [];
@@ -270,11 +275,12 @@ var expand = function expand(edit, frag, child, bitmap, subNodes) {
 };
 
 /**
-	Collapse an array node into a indexed node.
+    Collapse an array node into a indexed node.
 
-	@param count Number of elements in new array.
-	@param removed Index of removed element.
-	@param elements Array node children before remove.
+  @param edit Current edit.
+    @param count Number of elements in new array.
+    @param removed Index of removed element.
+    @param elements Array node children before remove.
 */
 var pack = function pack(edit, count, removed, elements) {
     var children = new Array(count - 1);
@@ -291,13 +297,13 @@ var pack = function pack(edit, count, removed, elements) {
 };
 
 /**
-	Merge two leaf nodes.
+    Merge two leaf nodes.
 
-	@param shift Current shift.
-	@param h1 Node 1 hash.
-	@param n1 Node 1.
-	@param h2 Node 2 hash.
-	@param n2 Node 2.
+    @param shift Current shift.
+    @param h1 Node 1 hash.
+    @param n1 Node 1.
+    @param h2 Node 2 hash.
+    @param n2 Node 2.
 */
 var mergeLeaves = function mergeLeaves(edit, shift, h1, n1, h2, n2) {
     if (h1 === h2) return Collision(edit, h1, [n2, n1]);
@@ -697,8 +703,11 @@ Map.prototype.remove = Map.prototype.delete = function (key) {
 
 /* Mutation
  ******************************************************************************/
-var beginMutation = hamt.beginMutation = function (tree) {
-    return new Map(tree._editable + 1, tree._edit + 1, tree._config, tree._root);
+/**
+    Mark `map` as mutable.
+ */
+var beginMutation = hamt.beginMutation = function (map) {
+    return new Map(map._editable + 1, map._edit + 1, map._config, map._root);
 };
 
 Map.prototype.beginMutation = function () {
@@ -706,13 +715,11 @@ Map.prototype.beginMutation = function () {
 };
 
 /**
- * Low level operation that marks a HAMT as immutable.
- *
- * @param tree HAMT
+    Mark `map` as immutable.
  */
-var endMutation = hamt.endMutation = function (tree) {
-    tree._editable = tree._editable && tree._editable - 1;
-    return tree;
+var endMutation = hamt.endMutation = function (map) {
+    map._editable = map._editable && map._editable - 1;
+    return map;
 };
 
 Map.prototype.endMutation = function () {
@@ -720,6 +727,9 @@ Map.prototype.endMutation = function () {
 };
 
 /**
+    Mutate `map` within the context of `f`.
+    @param f
+    @param map HAMT
 */
 var mutate = hamt.mutate = function (f, map) {
     var transient = beginMutation(map);
@@ -757,7 +767,10 @@ var lazyVisitChildren = function lazyVisitChildren(len, children, i, f, k) {
 var lazyVisit = function lazyVisit(node, f, k) {
     switch (node.type) {
         case LEAF:
-            return { value: f(node), rest: k };
+            return {
+                value: f(node),
+                rest: k
+            };
 
         case COLLISION:
         case ARRAY:
@@ -770,7 +783,9 @@ var lazyVisit = function lazyVisit(node, f, k) {
     }
 };
 
-var DONE = { done: true };
+var DONE = {
+    done: true
+};
 
 /**
     Javascript iterator over a map.
