@@ -623,10 +623,15 @@ hamt.make = function (config) {
 };
 
 /**
+    Empty map.
+*/
+hamt.empty = hamt.make();
+
+/**
     Does `map` contain any elements?
 */
 var isEmpty = hamt.isEmpty = function (map) {
-    return !!isEmptyNode(map._root);
+    return map && !!isEmptyNode(map._root);
 };
 
 Map.prototype.isEmpty = function () {

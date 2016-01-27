@@ -121,7 +121,7 @@ describe('mutate', () => {
             h.set(x, x);
             assert.strictEqual(i + 1, h.count());
         }),
-        hamt.make());
+        hamt.empty);
 
     assert.strictEqual(insert.length, h.size);
     insert.forEach(x =>
