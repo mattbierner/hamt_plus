@@ -43,7 +43,7 @@ require(['hamt'], function(hamt) {
 
 
 # Usage
-Hamt provides a method chaining interface and free functions for updating and querying the map. Both APIs provide identical functionality, but the free functions are designed for binding and composition, while the method chaining API is more legible and more Javascripty.
+Hamt+ provides a method chaining interface and free functions for updating and querying the map. Both APIs provide identical functionality, but the free functions are designed for binding and composition, while the method chaining API is more legible and more Javascripty.
 
 HAMTs are is persistent, so operations always return a modified copy of the map instead of altering the original.
 
@@ -410,7 +410,7 @@ h.get('b') === 2;
 ```
 
 ## Development
-Any contributions to Hamt+ are welcome. Feel free to open an [issues][https://github.com/mattbierner/hamt_plus/issues] if you run into problems or have a suggested improvement.
+Any contributions to Hamt+ are welcome. Feel free to open an [issues](https://github.com/mattbierner/hamt_plus/issues) if you run into problems or have a suggested improvement.
 
 To develop Hamt, fork the repo and install the development node packages:
 
