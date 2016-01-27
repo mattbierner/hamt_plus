@@ -316,12 +316,16 @@ var mergeLeaves = function mergeLeaves(edit, shift, h1, n1, h2, n2) {
 /**
     Update an entry in a collision list.
 
+    @param mutate Should mutation be used?
+    @param edit Current edit.
+    @param keyEq Key compare function.
     @param hash Hash of collision.
     @param list Collision list.
     @param f Update function.
     @param k Key to update.
+    @param size Size ref.
 */
-var updateCollisionList = function updateCollisionList(mutate, edit, keyEq, h, list, f, k) {
+var updateCollisionList = function updateCollisionList(mutate, edit, keyEq, h, list, f, k, size) {
     var len = list.length;
     for (var i = 0; i < len; ++i) {
         var child = list[i];
@@ -330,12 +334,18 @@ var updateCollisionList = function updateCollisionList(mutate, edit, keyEq, h, l
             var _newValue = f(value);
             if (_newValue === value) return list;
 
-            return _newValue === nothing ? arraySpliceOut(mutate, i, list) : arrayUpdate(mutate, i, Leaf(edit, h, k, _newValue), list);
+            if (_newValue === nothing) {
+                --size.value;
+                return arraySpliceOut(mutate, i, list);
+            }
+            return arrayUpdate(mutate, i, Leaf(edit, h, k, _newValue), list);
         }
     }
 
     var newValue = f();
-    return newValue === nothing ? list : arrayUpdate(mutate, len, Leaf(edit, h, k, newValue), list);
+    if (newValue === nothing) return list;
+    ++size.value;
+    return arrayUpdate(mutate, len, Leaf(edit, h, k, newValue), list);
 };
 
 var canEditNode = function canEditNode(edit, node) {
@@ -344,33 +354,40 @@ var canEditNode = function canEditNode(edit, node) {
 
 /* Editing
  ******************************************************************************/
-var Leaf__modify = function Leaf__modify(edit, keyEq, shift, f, h, k) {
+var Leaf__modify = function Leaf__modify(edit, keyEq, shift, f, h, k, size) {
     if (keyEq(k, this.key)) {
         var _v = f(this.value);
-        if (_v === this.value) return this;
+        if (_v === this.value) return this;else if (_v === nothing) {
+            --size.value;
+            return empty;
+        }
         if (canEditNode(edit, this)) {
             this.value = _v;
             return this;
         }
-        return _v === nothing ? empty : Leaf(edit, h, k, _v);
+        return Leaf(edit, h, k, _v);
     }
     var v = f();
-    return v === nothing ? this : mergeLeaves(edit, shift, this.hash, this, h, Leaf(edit, h, k, v));
+    if (v === nothing) return this;
+    ++size.value;
+    return mergeLeaves(edit, shift, this.hash, this, h, Leaf(edit, h, k, v));
 };
 
-var Collision__modify = function Collision__modify(edit, keyEq, shift, f, h, k) {
+var Collision__modify = function Collision__modify(edit, keyEq, shift, f, h, k, size) {
     if (h === this.hash) {
         var canEdit = canEditNode(edit, this);
-        var list = updateCollisionList(canEdit, edit, keyEq, this.hash, this.children, f, k);
+        var list = updateCollisionList(canEdit, edit, keyEq, this.hash, this.children, f, k, size);
         if (list === this.children) return this;
 
         return list.length > 1 ? Collision(edit, this.hash, list) : list[0]; // collapse single element collision list
     }
     var v = f();
-    return v === nothing ? this : mergeLeaves(edit, shift, this.hash, this, h, Leaf(edit, h, k, v));
+    if (v === nothing) return this;
+    ++size.value;
+    return mergeLeaves(edit, shift, this.hash, this, h, Leaf(edit, h, k, v));
 };
 
-var IndexedNode__modify = function IndexedNode__modify(edit, keyEq, shift, f, h, k) {
+var IndexedNode__modify = function IndexedNode__modify(edit, keyEq, shift, f, h, k, size) {
     var mask = this.mask;
     var children = this.children;
     var frag = hashFragment(shift, h);
@@ -378,7 +395,7 @@ var IndexedNode__modify = function IndexedNode__modify(edit, keyEq, shift, f, h,
     var indx = fromBitmap(mask, bit);
     var exists = mask & bit;
     var current = exists ? children[indx] : empty;
-    var child = current._modify(edit, keyEq, shift + SIZE, f, h, k);
+    var child = current._modify(edit, keyEq, shift + SIZE, f, h, k, size);
 
     if (current === child) return this;
 
@@ -407,17 +424,16 @@ var IndexedNode__modify = function IndexedNode__modify(edit, keyEq, shift, f, h,
         this.mask = bitmap;
         this.children = newChildren;
         return this;
-    } else {
-        return IndexedNode(edit, bitmap, newChildren);
     }
+    return IndexedNode(edit, bitmap, newChildren);
 };
 
-var ArrayNode__modify = function ArrayNode__modify(edit, keyEq, shift, f, h, k) {
+var ArrayNode__modify = function ArrayNode__modify(edit, keyEq, shift, f, h, k, size) {
     var count = this.size;
     var children = this.children;
     var frag = hashFragment(shift, h);
     var child = children[frag];
-    var newChild = (child || empty)._modify(edit, keyEq, shift + SIZE, f, h, k);
+    var newChild = (child || empty)._modify(edit, keyEq, shift + SIZE, f, h, k, size);
 
     if (child === newChild) return this;
 
@@ -441,32 +457,34 @@ var ArrayNode__modify = function ArrayNode__modify(edit, keyEq, shift, f, h, k) 
         this.size = count;
         this.children = newChildren;
         return this;
-    } else {
-        return ArrayNode(edit, count, newChildren);
     }
+    return ArrayNode(edit, count, newChildren);
 };
 
-empty._modify = function (edit, keyEq, shift, f, h, k) {
+empty._modify = function (edit, keyEq, shift, f, h, k, size) {
     var v = f();
-    return v === nothing ? empty : Leaf(edit, h, k, v);
+    if (v === nothing) return empty;
+    ++size.value;
+    return Leaf(edit, h, k, v);
 };
 
 /*
  ******************************************************************************/
-function Map(editable, edit, config, root) {
+function Map(editable, edit, config, root, size) {
     this._editable = editable;
     this._edit = edit;
     this._config = config;
     this._root = root;
+    this._size = size;
 };
 
-Map.prototype.setRoot = function (newRoot) {
-    if (newRoot === this._root) return this;
+Map.prototype.setTree = function (newRoot, newSize) {
     if (this._editable) {
         this._root = newRoot;
+        this._size = newSize;
         return this;
     }
-    return new Map(this._editable, this._edit, this._config, newRoot);
+    return newRoot === this._root ? this : new Map(this._editable, this._edit, this._config, newRoot, newSize);
 };
 
 /* Queries
@@ -588,18 +606,20 @@ Map.prototype.has = function (key) {
     return has(key, this);
 };
 
-/**
-
-*/
 var defKeyCompare = function defKeyCompare(x, y) {
     return x === y;
 };
 
+/**
+    Create an empty map.
+
+    @param config Configuration.
+*/
 hamt.make = function (config) {
     return new Map(0, 0, {
         keyEq: config && config.keyEq || defKeyCompare,
         hash: config && config.hash || hash
-    }, empty);
+    }, empty, 0);
 };
 
 /**
@@ -626,8 +646,9 @@ Map.prototype.isEmpty = function () {
     Returns a map with the modified value. Does not alter `map`.
 */
 var modifyHash = hamt.modifyHash = function (f, hash, key, map) {
-    var newRoot = map._root._modify(map._editable ? map._edit : NaN, map._config.keyEq, 0, f, hash, key);
-    return map.setRoot(newRoot);
+    var size = { value: map._size };
+    var newRoot = map._root._modify(map._editable ? map._edit : NaN, map._config.keyEq, 0, f, hash, key, size);
+    return map.setTree(newRoot, size.value);
 };
 
 Map.prototype.modifyHash = function (hash, key, f) {
@@ -707,7 +728,7 @@ Map.prototype.remove = Map.prototype.delete = function (key) {
     Mark `map` as mutable.
  */
 var beginMutation = hamt.beginMutation = function (map) {
-    return new Map(map._editable + 1, map._edit + 1, map._config, map._root);
+    return new Map(map._editable + 1, map._edit + 1, map._config, map._root, map._size);
 };
 
 Map.prototype.beginMutation = function () {
@@ -915,11 +936,8 @@ Map.prototype.forEach = function (f) {
 /**
     Get the number of entries in `map`.
 */
-var inc = function inc(x) {
-    return x + 1;
-};
 var count = hamt.count = function (map) {
-    return fold(inc, 0, map);
+    return map._size;
 };
 
 Map.prototype.count = function () {

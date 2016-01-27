@@ -117,16 +117,22 @@ describe('mutate', () => {
         "face", "flushed", "animated"];
 
     const h = hamt.mutate(h =>
-        insert.forEach(x => h.set(x, x)),
+        insert.forEach((x, i) => {
+            h.set(x, x);
+            assert.strictEqual(i + 1, h.count());
+        }),
         hamt.make());
 
     assert.strictEqual(insert.length, h.size);
     insert.forEach(x =>
         assert.strictEqual(x, h.get(x)));
 
-    const h1 = hamt.mutate(h =>
-        insert.forEach(x => h.set(x + x, x)),
-        h);
+    const h1 = hamt.mutate(h => {
+        insert.forEach((x, i) => {
+            h.set(x + x, x);
+            assert.strictEqual(insert.length + i + 1, h.count());
+        });
+    }, h);
 
       assert.strictEqual(insert.length, h.size);
       insert.forEach(x =>
