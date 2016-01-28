@@ -287,10 +287,12 @@ var pack = function pack(edit, count, removed, elements) {
     var g = 0;
     var bitmap = 0;
     for (var i = 0, len = elements.length; i < len; ++i) {
-        var elem = elements[i];
-        if (i !== removed && !isEmptyNode(elem)) {
-            children[g++] = elem;
-            bitmap |= 1 << i;
+        if (i !== removed) {
+            var elem = elements[i];
+            if (elem && !isEmptyNode(elem)) {
+                children[g++] = elem;
+                bitmap |= 1 << i;
+            }
         }
     }
     return IndexedNode(edit, bitmap, children);

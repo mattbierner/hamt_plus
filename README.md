@@ -1,14 +1,11 @@
 # Hamt+
-Fork of [Hamt][hamt] with transactions and custom key types.
+Fork of the [Hamt][hamt] ([hash array mapped trie][hash-array-mapped-trie]) library. This fork adds a few important features in exchange for very slightly degraded performance:
 
-### Overview
-This library is a fork of the [Hamt][hamt] [hash array mapped trie][hash-array-mapped-trie] library that adds a few important features in exchange for slightly degraded performance:
+* Transient mutation. This allows efficient mass operations, while retaining the safety of a persistent data structure.
+* Supports using a custom key comparision function.
+* Supports using a custom hash function.
 
-* A transaction interface for mutating a map in a specific context. This allows efficient mass operations, while retaining the safety of a persistent data structure.
-* Custom key compare function.
-* Custom hash function.
-
-The APIs of Hamt and Hamt+ are nearly identical.
+The Hamt+ Api is a superset of Hamt's Api. Hamt+ supports any key type using the custom hash and key comparision functions.
 
 ## Install
 Source code is in `hamt.js` and generated from `lib/hamt.js`. The library supports node, AMD, and use as a global.

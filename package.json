@@ -1,6 +1,6 @@
 {
     "name": "hamt_plus",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Fork of HAMT that adds transient mutation and support for custom key types",
     "keywords": [
         "trie",
@@ -19,8 +19,8 @@
 
     "main": "hamt.js",
     "files": [
-    	"hamt.js",
-	    "hamt.js.map"
+        "hamt.js",
+        "hamt.js.map"
     ],
     "dependencies": {},
     "devDependencies": {

@@ -50,7 +50,7 @@ describe('remove', () => {
         assert.strictEqual(5, h1.getHash(0, 'b'));
     });
 
-     it('should not remove for a collision that does not match key', () => {
+    it('should not remove for a collision that does not match key', () => {
         const h1 = hamt.make()
             .setHash(0, 'a', 3)
             .setHash(0, 'b', 5);
@@ -64,15 +64,17 @@ describe('remove', () => {
     });
 
     it('should use custom hash function', () => {
-      const hash = () => 0;
-      const h1 = hamt.make({ hash: hash })
-          .setHash(0, 'a', 3)
-          .setHash(0, 'b', 5);
+        const hash = () => 0;
+        const h1 = hamt.make({
+                hash: hash
+            })
+            .setHash(0, 'a', 3)
+            .setHash(0, 'b', 5);
 
-      const h2 = h1.delete('a');
-      assert.strictEqual(undefined, h2.getHash(0, 'a'));
-      assert.strictEqual(5, h2.getHash(0, 'b'));
-  });
+        const h2 = h1.delete('a');
+        assert.strictEqual(undefined, h2.getHash(0, 'a'));
+        assert.strictEqual(5, h2.getHash(0, 'b'));
+    });
 
     it('should remove correctly from large set', () => {
         const insert = [
@@ -80,14 +82,16 @@ describe('remove', () => {
             "l", "b", "_", "V", "Z", "G", "o", "F", "Q", "a", "k", "j", "r",
             "B", "A", "y", "\\", "R", "D", "i", "c", "]", "C", "[", "e", "s",
             "t", "J", "E", "q", "v", "M", "T", "N", "L", "K", "Y", "d", "P",
-            "u", "I", "O", "`", "X"];
+            "u", "I", "O", "`", "X"
+        ];
 
         const remove = [
             "w", "m", "Q", "R", "i", "K", "P", "Y", "D", "g", "y", "L",
             "b", "[", "a", "t", "j", "W", "J", "G", "q", "r", "p", "U",
             "v", "h", "S", "_", "d", "x", "I", "F", "f", "n", "B", "\\",
             "k", "V", "N", "l", "X", "A", "]", "s", "Z", "O", "^", "o",
-            "`", "H", "E", "e", "M", "u", "T", "c", "C"];
+            "`", "H", "E", "e", "M", "u", "T", "c", "C"
+        ];
 
         let h = hamt.make();
         insert.forEach(function(x) {
@@ -117,5 +121,42 @@ describe('remove', () => {
         const h2 = hamt.remove('none', h1);
 
         assert.strictEqual(h1, h2);
-    })
+    });
+
+    it('should when all elements are removed', () => {
+        const keys = ['hiymmhdhq', 'hzyghyg', 'hzieut', 'mjnaup', 'tinjxpys', 'kwpcqm',
+            'vxeusxcg', 'faybuua', 'lycfxflwft', 'tnwtzj', 'lrvycc', 'flaqdhqkj',
+            'ngkmhejrm', 'jkqotnew', 'tvnxhguhn', 'frisdgmgwk', 'xqhakqug', 'cncoahk',
+            'zczoqcfqy', 'czlfnbl', 'comrfarx', 'xkxedunf', 'szzmuwuuu', 'mcqhmf',
+            'zqyjwwjba', 'kqoxvzky', 'mihnuv', 'shydgsfmpp', 'rdokftl', 'hzkpejjor',
+            'uuwfazpud', 'wauyyr', 'nhfzckr', 'kmfdpcdgwi', 'twhbuhpgp', 'eyzbrtjwa',
+            'aqdohkac', 'mteeptl', 'lmyxutoqg', 'ijqumqzsq', 'qwpqnsp', 'yklnknl',
+            'byjxqzl', 'ryptefqr', 'fhplnoi', 'uvflmypxsa', 'xsenqm', 'kpquygdx',
+            'ztsfcuy', 'xjrtyl', 'elzgmbcsfs', 'tksobwth', 'nxfktmbn', 'qsiqzdl',
+            'ztfxghd', 'blekwtpzg', 'ogtwty', 'jvwzhjwmnl', 'xiqset', 'yaeazzw',
+            'megtbspnvy', 'afjowwuv', 'ysaldydgvx', 'vrejaghyy', 'ogwjrroeiu', 'alvdrg',
+            'lytqpgdnt', 'yaiedb', 'czrtsqh', 'bfvxsoxvql', 'vpfaam', 'kbiyel', 'vwwubrdqx',
+            'iwhibpcqm', 'jrhkkzw', 'ajezbycwg', 'asubyu', 'ctdjnchw', 'gbzbbmdug', 'njxcfr',
+            'mddyfqb', 'xgtthksh', 'cocjuvwrjm', 'xnwuoczjnh', 'nqehrflx', 'szyfto',
+            'vpmynbgdo', 'zourijqabw', 'olujjqqkxy', 'rifpiaoqrj', 'ahurel', 'rqfdytylz',
+            'ymgpnp', 'qevprue', 'sjttddstx', 'uqjuyyu', 'mkwxsgg', 'aesdxulaw', 'nwtfbe',
+            'duyksei'
+        ];
+        const order = [62, 6, 52, 79, 89, 1, 94, 16, 10, 21, 70, 99, 7, 81, 63,
+            73, 53, 50, 25, 26, 78, 29, 28, 13, 35, 77, 84, 51, 15, 36, 96, 92, 69,
+            18, 88, 12, 20, 58, 14, 48, 17, 4, 82, 76, 42, 5, 9, 86, 87, 43, 61, 2,
+            66, 41, 68, 56, 54, 74, 22, 34, 3, 57, 31, 72, 91, 95, 23, 90, 32, 71,
+            85, 80, 60, 11, 0, 55, 46, 40, 37, 67, 75, 64, 97, 27, 49, 93, 47, 38,
+            83, 59, 65, 30, 98, 8, 44, 24, 19, 39, 45, 33
+        ];
+
+        let h = hamt.empty;
+        keys.forEach(function(x) {
+            h = hamt.set(x, x, h);
+        });
+
+        order.forEach(function(x) {
+            h = hamt.remove(keys[x], h);
+        });
+    });
 });

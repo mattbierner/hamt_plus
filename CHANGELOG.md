@@ -1,6 +1,9 @@
 # ChangeLog #
 
-## 1.0.0 - Janyuar 26, 2016
+## 1.0.1 - January 27, 2016
+* Fixed bug when array nodes are packed during removal.
+
+## 1.0.0 - January 26, 2016
 * Refork from Hamt 2.1
   * Duplicates existing Hamt 2.x API.
 * Added constant time size queries.
