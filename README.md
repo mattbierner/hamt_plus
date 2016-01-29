@@ -1,4 +1,7 @@
-# Hamt+
+<div align="center" >
+    <img src="https://raw.githubusercontent.com/mattbierner/hamt_plus/master/documentation/hamt-logo.png" alt="H.A.M.T.+" />
+</div>
+
 Fork of the [Hamt][hamt] ([hash array mapped trie][hash-array-mapped-trie]) library. This fork adds a few important features in exchange for very slightly degraded performance:
 
 * Transient mutation. This allows efficient mass operations, while retaining the safety of a persistent data structure.
