@@ -85,7 +85,7 @@ const Vec2 = (x, y) => ({ x: x, y: y });
 
 const vecMap = hamt.make({
     hash: (value) => hamt.hash(value.x + ',' + value.y),
-    keyEq: (a, b) => a.x === b.x && a.y === b.x
+    keyEq: (a, b) => a.x === b.x && a.y === b.y
 });
 
 vecMap = vecMap.set(Vec2(1, 2), 'value');
