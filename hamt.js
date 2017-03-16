@@ -1,6 +1,6 @@
 'use strict';
 
-function _typeof(obj) { return obj && typeof Symbol !== "undefined" && obj.constructor === Symbol ? "symbol" : typeof obj; }
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 /**
     @fileOverview Hash Array Mapped Trie.
@@ -109,21 +109,23 @@ var arrayUpdate = function arrayUpdate(mutate, at, v, arr) {
     @param arr Array.
 */
 var arraySpliceOut = function arraySpliceOut(mutate, at, arr) {
-    var len = arr.length;
+    var len = arr.length - 1;
     var i = 0,
         g = 0;
     var out = arr;
     if (mutate) {
-        i = g = at;
+        g = i = at;
     } else {
-        out = new Array(len - 1);
+        out = new Array(len);
         while (i < at) {
             out[g++] = arr[i++];
-        }++i;
+        }
     }
-    while (i < len) {
+    ++i;
+    while (i <= len) {
         out[g++] = arr[i++];
-    }return out;
+    }out.length = len;
+    return out;
 };
 
 /**
@@ -403,7 +405,7 @@ var IndexedNode__modify = function IndexedNode__modify(edit, keyEq, shift, f, h,
 
     var canEdit = canEditNode(edit, this);
     var bitmap = mask;
-    var newChildren = undefined;
+    var newChildren = void 0;
     if (exists && isEmptyNode(child)) {
         // remove
         bitmap &= ~bit;
@@ -440,7 +442,7 @@ var ArrayNode__modify = function ArrayNode__modify(edit, keyEq, shift, f, h, k, 
     if (child === newChild) return this;
 
     var canEdit = canEditNode(edit, this);
-    var newChildren = undefined;
+    var newChildren = void 0;
     if (isEmptyNode(child) && !isEmptyNode(newChild)) {
         // add
         ++count;
@@ -904,7 +906,7 @@ var fold = hamt.fold = function (f, z, m) {
     if (root.type === LEAF) return f(z, root.value, root.key);
 
     var toVisit = [root.children];
-    var children = undefined;
+    var children = void 0;
     while (children = toVisit.pop()) {
         for (var i = 0, len = children.length; i < len;) {
             var child = children[i++];
