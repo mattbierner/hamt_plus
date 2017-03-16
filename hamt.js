@@ -109,22 +109,24 @@ var arrayUpdate = function arrayUpdate(mutate, at, v, arr) {
     @param arr Array.
 */
 var arraySpliceOut = function arraySpliceOut(mutate, at, arr) {
-    var len = arr.length - 1;
-    var i = 0,
-        g = 0;
+    var newLen = arr.length - 1;
+    var i = 0;
+    var g = 0;
     var out = arr;
     if (mutate) {
-        g = i = at;
+        i = g = at;
     } else {
-        out = new Array(len);
+        out = new Array(newLen);
         while (i < at) {
             out[g++] = arr[i++];
         }
     }
     ++i;
-    while (i <= len) {
+    while (i <= newLen) {
         out[g++] = arr[i++];
-    }out.length = len;
+    }if (mutate) {
+        out.length = newLen;
+    }
     return out;
 };
 

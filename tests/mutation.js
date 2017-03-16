@@ -163,26 +163,7 @@ describe('mutate', () => {
             })
         }, hamt.empty);
 
-        assert.strictEqual(insert.length, h.size);
-        insert.forEach(x =>
-            assert.strictEqual(x, h.get(x)));
-
-        const h1 = hamt.mutate(h => {
-            insert.forEach((x, i) => {
-                h.set(x + x, x);
-                assert.strictEqual(insert.length + i + 1, h.count());
-            });
-        }, h);
-
-        assert.strictEqual(insert.length, h.size);
-        insert.forEach(x =>
-            assert.strictEqual(x, h.get(x)));
-
-        assert.strictEqual(insert.length * 2, h1.size);
-        insert.forEach(x => {
-            assert.strictEqual(x, h1.get(x));
-            assert.strictEqual(x, h1.get(x + x))
-        });
+        assert.strictEqual(0, h.count());
     });
 
 });
