@@ -1,5 +1,8 @@
 # ChangeLog #
 
+## 1.0.2 - March 27, 2017
+* Fixed mutation splice out. Thanks @wshager!
+
 ## 1.0.1 - January 27, 2016
 * Fixed bug when array nodes are packed during removal.
 
